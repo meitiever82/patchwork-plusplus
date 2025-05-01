@@ -18,4 +18,3 @@ demo = [
 
 [tool.scikit-build]
 cmake.args = ["-DINCLUDE_PYTHON_WRAPPER=true"]
-

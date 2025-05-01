@@ -2,10 +2,11 @@
 #include "patchwork/patchworkpp.h"
 
 // ROS 2
+#include <string>
+
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/header.hpp>
-#include <string>
 
 namespace patchworkpp_ros {
 
@@ -21,10 +22,10 @@ class GroundSegmentationServer : public rclcpp::Node {
 
   /// Stream the point clouds for visualization
   void PublishClouds(const Eigen::MatrixX3f &est_ground,
-                                             const Eigen::MatrixX3f &est_nonground,
-                                             const std_msgs::msg::Header header_msg);
- private:
+                     const Eigen::MatrixX3f &est_nonground,
+                     const std_msgs::msg::Header header_msg);
 
+ private:
   /// Data subscribers.
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
 

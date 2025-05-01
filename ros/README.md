@@ -20,13 +20,11 @@
   <br />
   <p align="center"><img src=../pictures/patchwork++.gif alt="animated" /></p>
 
-[Patchwork++][arXivlink], an extension of [Patchwork][patchworklink], is **a fast, robust, and self-adaptive ground segmentation algorithm** on 3D point cloud.
+[Patchwork++][arxivlink], an extension of [Patchwork][patchworklink], is **a fast, robust, and self-adaptive ground segmentation algorithm** on 3D point cloud.
+
 </div>
 
-[arXivlink]: https://arxiv.org/abs/2207.11919
-[patchworklink]: https://github.com/LimHyungTae/patchwork
-
----
+______________________________________________________________________
 
 # Patchwork++ ROS2 Wrapper
 
@@ -40,19 +38,19 @@ cd ~/ros2_ws/src
 git clone https://github.com/url-kaist/patchwork-plusplus.git
 cd ~/ros2_ws
 colcon build --packages-select patchworkpp
-source ./install/setup.bash 
+source ./install/setup.bash
 ```
 
 ## :runner: To run the demo codes
+
 There is a demo that executes Patchwork++ with a sample rosbag2 (mcap) file. You can download a sample file using the following command.
 
-> [!TIP]
+> \[!TIP\]
 > Please install mcap library as follows:
-> 
+>
 > sudo apt install ros-humble-rosbag2-storage-mcap
-> 
-> Then, download a sample dataset for ros2: [mcap file download [~540MB] ](https://laesze-my.sharepoint.com/:u:/g/personal/herno_o365_sze_hu/Eclwzn42FS9GunGay5LPq-EBA6U1dZseBFNDrr6P0MwB2w?download=1)
-
+>
+> Then, download a sample dataset for ros2: [mcap file download \[~540MB\] ](https://laesze-my.sharepoint.com/:u:/g/personal/herno_o365_sze_hu/Eclwzn42FS9GunGay5LPq-EBA6U1dZseBFNDrr6P0MwB2w?download=1)
 
 The only required argument to provide is the **topic name** so Patchwork++ knows which PointCloud2 to process:
 
@@ -70,3 +68,5 @@ Consequently, we can see the results in Rviz:
 
 ![img](../pictures/patchwork2_in_ros2.gif)
 
+[arxivlink]: https://arxiv.org/abs/2207.11919
+[patchworklink]: https://github.com/LimHyungTae/patchwork

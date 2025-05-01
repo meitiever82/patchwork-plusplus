@@ -40,4 +40,3 @@ add_executable(demo_visualize ${CMAKE_CURRENT_SOURCE_DIR}/demo_visualize_copied.
 # Note that `patchworkpp::ground_seg_cores` is aliased as `ground_seg_cores` when installing `patchworkpp` package
 target_link_libraries(demo_visualize patchworkpp::ground_seg_cores ${Open3D_LIBRARIES} "stdc++fs")
 target_include_directories(demo_visualize PUBLIC ${Open3D_INCLUDE_DIRS})
-

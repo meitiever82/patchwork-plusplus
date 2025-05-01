@@ -1,10 +1,11 @@
 import os
-import open3d as o3d
+
 import numpy as np
+import open3d as o3d
 import pypatchworkpp
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-input_cloud_filepath = os.path.join(cur_dir, '../../data/000000.bin')
+input_cloud_filepath = os.path.join(cur_dir, "../../data/000000.bin")
 
 
 def read_bin(bin_path):
@@ -13,8 +14,8 @@ def read_bin(bin_path):
 
     return scan
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     # Patchwork++ initialization
     params = pypatchworkpp.Parameters()
     params.verbose = True
@@ -28,16 +29,16 @@ if __name__ == "__main__":
     PatchworkPLUSPLUS.estimateGround(pointcloud)
 
     # Get Ground and Nonground
-    ground      = PatchworkPLUSPLUS.getGround()
-    nonground   = PatchworkPLUSPLUS.getNonground()
-    time_taken  = PatchworkPLUSPLUS.getTimeTaken()
+    ground = PatchworkPLUSPLUS.getGround()
+    nonground = PatchworkPLUSPLUS.getNonground()
+    time_taken = PatchworkPLUSPLUS.getTimeTaken()
 
-    ground_idx      = PatchworkPLUSPLUS.getGroundIndices()
-    nonground_idx   = PatchworkPLUSPLUS.getNongroundIndices()
+    ground_idx = PatchworkPLUSPLUS.getGroundIndices()
+    nonground_idx = PatchworkPLUSPLUS.getNongroundIndices()
 
     # Get centers and normals for patches
-    centers     = PatchworkPLUSPLUS.getCenters()
-    normals     = PatchworkPLUSPLUS.getNormals()
+    centers = PatchworkPLUSPLUS.getCenters()
+    normals = PatchworkPLUSPLUS.getNormals()
 
     print("Origianl Points  #: ", pointcloud.shape[0])
     print("Ground Points    #: ", ground.shape[0])
@@ -50,27 +51,29 @@ if __name__ == "__main__":
 
     # Visualize
     vis = o3d.visualization.VisualizerWithKeyCallback()
-    vis.create_window(width = 600, height = 400)
+    vis.create_window(width=600, height=400)
 
     mesh = o3d.geometry.TriangleMesh.create_coordinate_frame()
 
     ground_o3d = o3d.geometry.PointCloud()
     ground_o3d.points = o3d.utility.Vector3dVector(ground)
     ground_o3d.colors = o3d.utility.Vector3dVector(
-        np.array([[0.0, 1.0, 0.0] for _ in range(ground.shape[0])], dtype=float) # RGB
+        np.array([[0.0, 1.0, 0.0] for _ in range(ground.shape[0])], dtype=float)  # RGB
     )
 
     nonground_o3d = o3d.geometry.PointCloud()
     nonground_o3d.points = o3d.utility.Vector3dVector(nonground)
     nonground_o3d.colors = o3d.utility.Vector3dVector(
-        np.array([[1.0, 0.0, 0.0] for _ in range(nonground.shape[0])], dtype=float) #RGB
+        np.array(
+            [[1.0, 0.0, 0.0] for _ in range(nonground.shape[0])], dtype=float
+        )  # RGB
     )
 
     centers_o3d = o3d.geometry.PointCloud()
     centers_o3d.points = o3d.utility.Vector3dVector(centers)
     centers_o3d.normals = o3d.utility.Vector3dVector(normals)
     centers_o3d.colors = o3d.utility.Vector3dVector(
-        np.array([[1.0, 1.0, 0.0] for _ in range(centers.shape[0])], dtype=float) #RGB
+        np.array([[1.0, 1.0, 0.0] for _ in range(centers.shape[0])], dtype=float)  # RGB
     )
 
     vis.add_geometry(mesh)

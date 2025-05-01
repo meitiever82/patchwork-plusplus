@@ -19,5 +19,3 @@ If you want to **run demo**, just run the following command:
 ```
 
 Then, you can see the exact same result as Example 1 in the `cpp` directory!
-
-

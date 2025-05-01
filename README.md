@@ -20,34 +20,20 @@
   <br />
   <p align="center"><img src=pictures/patchwork++.gif alt="animated" /></p>
 
-  [Patchwork++][arXivlink], an extension of [Patchwork][patchworklink], is **a fast, robust, and self-adaptive ground segmentation algorithm** on 3D point cloud.
-</div>
+[Patchwork++][arxivlink], an extension of [Patchwork][patchworklink], is **a fast, robust, and self-adaptive ground segmentation algorithm** on 3D point cloud.
 
-[YouTubeLInk]: https://www.youtube.com/watch?v=fogCM159GRk
-[arXivlink]: https://arxiv.org/abs/2207.11919
-[patchworklink]: https://github.com/LimHyungTae/patchwork
-[SemanticKITTIlink]: http://www.semantic-kitti.org/
-[benchmarklink]: https://github.com/url-kaist/Ground-Segmentation-Benchmark
+</div>
 
 ## :open_file_folder: What's in this repo
 
-* C++ source code of Patchwork++ ([patchworkpp][sourcecodelink])
-* Python binding of Patchwork++ using pybind11 ([python_wrapper][wraplink])
-* Examples codes of [C++][cppexamplelink], [Python][pyexamplelink], and [ROS2][rosexamplelink] :thumbsup:
+- C++ source code of Patchwork++ ([patchworkpp][sourcecodelink])
+- Python binding of Patchwork++ using pybind11 ([python_wrapper][wraplink])
+- Examples codes of [C++][cppexamplelink], [Python][pyexamplelink], and [ROS2][rosexamplelink] :thumbsup:
 
 > If you are familiar with ROS1, you can also visit [here][roslink] and try executing ROS1-based Patchwork++!
 
-[roslink]: https://github.com/url-kaist/patchwork-plusplus-ros
-
-[sourcecodelink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/cpp/patchworkpp
-[pybind11link]: https://github.com/pybind/pybind11
-[wraplink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/python/patchworkpp
-
-[cppexamplelink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/cpp 
-[pyexamplelink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/python
-[rosexamplelink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/ros
-
 ## :package: Prerequisite packages
+
 > What we need are just minimal dependencies.
 
 ```commandline
@@ -106,14 +92,15 @@ cd ~/ros2_ws/src
 git clone https://github.com/url-kaist/patchwork-plusplus.git
 cd ~/ros2_ws
 colcon build --packages-select patchworkpp
-source ./install/setup.bash 
+source ./install/setup.bash
 ```
 
 How to launch ROS2 nodes is explained [here][rosexamplelink].
 
-
 ## :pencil: Citation
-If you use our codes, please cite our paper ([arXiv][arXivLink], [IEEE *Xplore*][patchworkppIEEElink])
+
+If you use our codes, please cite our paper ([arXiv][arxivlink], [IEEE *Xplore*][patchworkppieeelink])
+
 ```
 @inproceedings{lee2022patchworkpp,
     title={{Patchwork++: Fast and robust ground segmentation solving partial under-segmentation using 3D point cloud}},
@@ -124,7 +111,8 @@ If you use our codes, please cite our paper ([arXiv][arXivLink], [IEEE *Xplore*]
 }
 ```
 
-In addition, you can also check the paper of our baseline, Patchwork. ([arXiv][patchworkarXivlink], [IEEE *Xplore*][patchworkIEEElink])
+In addition, you can also check the paper of our baseline, Patchwork. ([arXiv][patchworkarxivlink], [IEEE *Xplore*][patchworkieeelink])
+
 ```
 @article{lim2021patchwork,
     title={Patchwork: Concentric Zone-based Region-wise Ground Segmentation with Ground Likelihood Estimation Using a 3D LiDAR Sensor},
@@ -133,9 +121,6 @@ In addition, you can also check the paper of our baseline, Patchwork. ([arXiv][p
     year={2021}
 }
 ```
-[patchworkppIEEElink]: https://ieeexplore.ieee.org/document/9981561
-[patchworkarXivlink]: https://arxiv.org/abs/2108.05560
-[patchworkIEEElink]: https://ieeexplore.ieee.org/document/9466396
 
 ## :triangular_flag_on_post: Tested Environment
 
@@ -146,20 +131,31 @@ In addition, you can also check the paper of our baseline, Patchwork. ([arXiv][p
 - pybind11 v2.2.3
 - Eigen 3.3.7
 
-
 ## :mailbox: Contact Information
+
 If you have any questions, please do not hesitate to contact us
-* [Seungjae Lee][sjlink] :envelope: sj98lee `at` kaist `ac` kr
-* [Hyungtae Lim][htlink] :envelope: shapelim `at` kaist `ac` kr
 
-[sjlink]: https://github.com/seungjae24
-[htlink]: https://github.com/LimHyungTae
+- [Seungjae Lee][sjlink] :envelope: sj98lee `at` kaist `ac` kr
+- [Hyungtae Lim][htlink] :envelope: shapelim `at` kaist `ac` kr
 
-
----
+______________________________________________________________________
 
 ## Todo List
-- [ ] Support intensity for RNR in `master` branch
-- [ ] Support `Patchwork` mode for users who use this repository for baseline comparison purposes
-- [ ] Integrate TBB and optimize the performance
 
+- \[ \] Support intensity for RNR in `master` branch
+- \[ \] Support `Patchwork` mode for users who use this repository for baseline comparison purposes
+- \[ \] Integrate TBB and optimize the performance
+
+[arxivlink]: https://arxiv.org/abs/2207.11919
+[cppexamplelink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/cpp
+[htlink]: https://github.com/LimHyungTae
+[patchworkarxivlink]: https://arxiv.org/abs/2108.05560
+[patchworkieeelink]: https://ieeexplore.ieee.org/document/9466396
+[patchworklink]: https://github.com/LimHyungTae/patchwork
+[patchworkppieeelink]: https://ieeexplore.ieee.org/document/9981561
+[pyexamplelink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/python
+[rosexamplelink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/ros
+[roslink]: https://github.com/url-kaist/patchwork-plusplus-ros
+[sjlink]: https://github.com/seungjae24
+[sourcecodelink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/cpp/patchworkpp
+[wraplink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/python/patchworkpp

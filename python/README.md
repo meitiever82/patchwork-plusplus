@@ -20,33 +20,38 @@
   <br />
   <p align="center"><img src=../pictures/patchwork++.gif alt="animated" /></p>
 
-  [Patchwork++][arXivlink], an extension of [Patchwork][patchworklink], is **a fast, robust, and self-adaptive ground segmentation algorithm** on 3D point cloud.
+[Patchwork++][arxivlink], an extension of [Patchwork][patchworklink], is **a fast, robust, and self-adaptive ground segmentation algorithm** on 3D point cloud.
+
 </div>
 
-[arXivlink]: https://arxiv.org/abs/2207.11919
-[patchworklink]: https://github.com/LimHyungTae/patchwork
-
----
+______________________________________________________________________
 
 # Patchwork++ in Python
 
 ## :runner: To run the demo codes
+
 > There are some example codes for your convenience!
 > Please try using Patchwork++ to segment ground points in a 3D point cloud :smiley:
 
-* Example 1. Run patchwork++ and visualize ground points (green) and non-ground points (red)
+- Example 1. Run patchwork++ and visualize ground points (green) and non-ground points (red)
+
 ```commandline
 python python/examples/demo_visualize.py
 ```
 
-* Example 2. Run patchwork++ with sequential point cloud inputs 
+- Example 2. Run patchwork++ with sequential point cloud inputs
+
 ```commandline
 python python/examples/demo_sequential.py
 ```
 
 ### Demo Result
+
 If you execute Patchwork++ with given demo codes well, you can get the following result!
 
 It is a ground segmentation result of data/000000.bin file using Open3D visualization. (Ground : Green, Nonground : Red)
 
 ![Open3D Visualization of "data/000000.bin"](../pictures/demo_000000.png)
+
+[arxivlink]: https://arxiv.org/abs/2207.11919
+[patchworklink]: https://github.com/LimHyungTae/patchwork

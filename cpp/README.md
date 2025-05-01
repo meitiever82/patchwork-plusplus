@@ -20,13 +20,11 @@
   <br />
   <p align="center"><img src=../pictures/patchwork++.gif alt="animated" /></p>
 
-  [Patchwork++][arXivlink], an extension of [Patchwork][patchworklink], is **a fast, robust, and self-adaptive ground segmentation algorithm** on 3D point cloud.
+[Patchwork++][arxivlink], an extension of [Patchwork][patchworklink], is **a fast, robust, and self-adaptive ground segmentation algorithm** on 3D point cloud.
+
 </div>
 
-[arXivlink]: https://arxiv.org/abs/2207.11919
-[patchworklink]: https://github.com/LimHyungTae/patchwork
-
----
+______________________________________________________________________
 
 # Patchwork++ in C++
 
@@ -45,7 +43,7 @@ If you want to **run demo**, just run the following command in the top-level dir
 make cppinstall_with_demo
 ```
 
-, or 
+, or
 
 ```commandline
 # in patchwork-plusplus directory
@@ -54,7 +52,7 @@ $ cmake -DCMAKE_BUILD_TYPE=Release -DINCLUDE_CPP_EXAMPLES=ON ..
 $ make -j 16
 ```
 
-> [!WARNING]  
+> \[!WARNING\]
 > Please check your cmake version via `cmake --version`.
 > If it is lower than 3.20, it is automatically updated by `scripts/install_latest_cmake.bash` (see [here](https://github.com/url-kaist/patchwork-plusplus/blob/master/cpp/CMakeLists.txt#L31)).
 
@@ -70,31 +68,36 @@ sudo make install
 Consequently, our Patchwork++ is installed in your local environment.
 An example of finding the `patchworkpp` package in another package is also provided in [example_of_find_package](https://github.com/url-kaist/patchwork-plusplus/tree/master/cpp/example_of_find_package)
 
-
 ## :runner: To run the demo codes
+
 > There are some example codes for your convenience!
 > Please try using Patchwork++ to segment ground points in a 3D point cloud :smiley:
 
+- Example 1. Run patchwork++ and visualize ground points (green) and non-ground points (red)
 
-* Example 1. Run patchwork++ and visualize ground points (green) and non-ground points (red)
 ```commandline
 ./cpp/build/examples/demo_visualize
 ```
 
-* Example 2. Run patchwork++ with sequential point cloud inputs 
+- Example 2. Run patchwork++ with sequential point cloud inputs
+
 ```commandline
 ./cpp/build/examples/demo_sequential
 ```
 
-* Example 3. Run patchwork++ with your point cloud file, example here
+- Example 3. Run patchwork++ with your point cloud file, example here
+
 ```commandline
 ./examples/demo_visualize ./data/000000.bin # specify file path
 ```
 
 ### Demo Result
+
 If you execute Patchwork++ with given demo codes well, you can get the following result!
 
 It is a ground segmentation result of data/000000.bin file using Open3D visualization. (Ground : Green, Nonground : Red)
 
 ![Open3D Visualization of "data/000000.bin"](../pictures/demo_000000.png)
 
+[arxivlink]: https://arxiv.org/abs/2207.11919
+[patchworklink]: https://github.com/LimHyungTae/patchwork
