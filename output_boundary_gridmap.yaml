@@ -1,0 +1,12 @@
+image: output_boundary_gridmap.pgm
+resolution: 0.1
+origin: [-52.2505, -16.8485, 0.0]
+# Auto-calculated origin: grid map (0,0) = world (-52.2505, -16.8485)
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+# Grid map coordinate system:
+# - Origin at bottom-left corner
+# - X-axis points right
+# - Y-axis points up
+# - Values: 0=ground, 100=unknown, 200=obstacle

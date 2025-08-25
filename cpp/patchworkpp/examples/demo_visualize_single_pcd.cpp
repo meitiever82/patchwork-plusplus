@@ -24,13 +24,13 @@ struct GridMapParams {
   uint8_t ground_value    = 0;      // value for ground cells
   uint8_t unknown_value   = 100;    // value for unknown cells
   uint8_t obstacle_value  = 200;    // value for obstacle cells
-  double height_threshold = 2.0;    // height threshold for filtering high points
+  double height_threshold = 3.5;    // height threshold for filtering high points - 提高以保留更多墙壁
 
-  // 形态学操作参数
-  int erosion_size  = 2;  // 腐蚀核大小
-  int dilation_size = 3;  // 膨胀核大小
-  int opening_size  = 2;  // 开运算核大小（移除小噪声）
-  int closing_size  = 3;  // 闭运算核大小（填充小洞）
+  // 形态学操作参数 - 专注于地面连续性
+  int erosion_size  = 1;  // 腐蚀核大小 - 减小以保留障碍物细节
+  int dilation_size = 1;  // 膨胀核大小 - 轻微安全边界
+  int opening_size  = 2;  // 开运算核大小 - 只移除极小噪声
+  int closing_size  = 4;  // 闭运算核大小 - 增大以填充地面间隙
 
   // 坐标系对齐参数
   bool use_custom_origin = false;  // 是否使用自定义原点
@@ -314,6 +314,74 @@ GridMapParams calculateOptimalParams(const Eigen::MatrixX3f& ground_points,
   return params;
 }
 
+// 连接断开的边界线
+cv::Mat connectBoundaries(const cv::Mat& obstacles_mask) {
+  cv::Mat connected_obstacles = obstacles_mask.clone();
+  
+  std::cout << "  Connecting broken boundaries..." << std::endl;
+  
+  // 1. 检测边缘
+  cv::Mat edges;
+  cv::Canny(obstacles_mask * 255, edges, 30, 90);
+  
+  // 2. 使用形态学闭运算连接近邻边界
+  cv::Mat line_kernel_h = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 1)); // 水平线核
+  cv::Mat line_kernel_v = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, 5)); // 垂直线核
+  
+  cv::Mat connected_h, connected_v;
+  cv::morphologyEx(connected_obstacles, connected_h, cv::MORPH_CLOSE, line_kernel_h);
+  cv::morphologyEx(connected_obstacles, connected_v, cv::MORPH_CLOSE, line_kernel_v);
+  
+  // 3. 合并水平和垂直连接结果
+  cv::bitwise_or(connected_h, connected_v, connected_obstacles);
+  
+  // 4. 使用对角线核连接对角边界
+  cv::Mat diag_kernel = (cv::Mat_<uint8_t>(3, 3) << 
+                         1, 0, 0,
+                         0, 1, 0, 
+                         0, 0, 1);
+  cv::Mat diag_kernel2 = (cv::Mat_<uint8_t>(3, 3) << 
+                          0, 0, 1,
+                          0, 1, 0,
+                          1, 0, 0);
+  
+  cv::Mat connected_d1, connected_d2;
+  cv::morphologyEx(connected_obstacles, connected_d1, cv::MORPH_CLOSE, diag_kernel);
+  cv::morphologyEx(connected_obstacles, connected_d2, cv::MORPH_CLOSE, diag_kernel2);
+  
+  // 5. 最终合并
+  cv::bitwise_or(connected_obstacles, connected_d1, connected_obstacles);
+  cv::bitwise_or(connected_obstacles, connected_d2, connected_obstacles);
+  
+  // 6. 轻微平滑以去除连接产生的锯齿
+  cv::Mat smooth_kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(2, 2));
+  cv::morphologyEx(connected_obstacles, connected_obstacles, cv::MORPH_CLOSE, smooth_kernel);
+  
+  return connected_obstacles;
+}
+
+// 移除小连通域
+cv::Mat removeSmallRegions(const cv::Mat& binary_mask, int min_area_threshold) {
+  cv::Mat labels, stats, centroids;
+  cv::Mat cleaned_mask = binary_mask.clone();
+  
+  int num_components = cv::connectedComponentsWithStats(binary_mask, labels, stats, centroids);
+  
+  int removed_count = 0;
+  for (int i = 1; i < num_components; i++) { // 跳过背景(0)
+    int area = stats.at<int>(i, cv::CC_STAT_AREA);
+    if (area < min_area_threshold) {
+      cleaned_mask.setTo(0, labels == i);
+      removed_count++;
+    }
+  }
+  
+  std::cout << "  Removed " << removed_count << " small regions (< " 
+            << min_area_threshold << " pixels)" << std::endl;
+  
+  return cleaned_mask;
+}
+
 // 使用形态学操作后处理网格地图
 cv::Mat postProcessGridMap(const cv::Mat& grid_map, const GridMapParams& params) {
   cv::Mat processed_map = grid_map.clone();
@@ -343,8 +411,19 @@ cv::Mat postProcessGridMap(const cv::Mat& grid_map, const GridMapParams& params)
   // 3. 对障碍物进行闭运算：填充障碍物内部的小洞
   cv::morphologyEx(cleaned_obstacles, cleaned_obstacles, cv::MORPH_CLOSE, closing_kernel);
 
-  // 4. 对地面进行闭运算：填充地面内部的小洞
+  // 4. 对地面进行多次闭运算：填充地面内部的小洞，提高连续性
   cv::morphologyEx(cleaned_ground, cleaned_ground, cv::MORPH_CLOSE, closing_kernel);
+  
+  // 4.1. 额外的地面连续性处理 - 再次闭运算以连接近邻地面区域
+  cv::Mat larger_closing_kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(6, 6));
+  cv::morphologyEx(cleaned_ground, cleaned_ground, cv::MORPH_CLOSE, larger_closing_kernel);
+
+  // 4.5. 不移除障碍物区域，保留所有检测到的障碍物
+  // int min_obstacle_area = static_cast<int>(4 / (params.resolution * params.resolution)); 
+  // cleaned_obstacles = removeSmallRegions(cleaned_obstacles, min_obstacle_area);
+
+  // 4.6. 边界连续性优化 - 连接断开的建筑物边界
+  cleaned_obstacles = connectBoundaries(cleaned_obstacles);
 
   // 5. 可选：对障碍物进行轻微膨胀以提供安全边界
   cv::Mat safety_obstacles;
@@ -453,9 +532,9 @@ cv::Mat generateGridMap(const Eigen::MatrixX3f& ground_points,
             << std::endl;
 
   // 后处理：移除孤立的小区域
-  // cv::Mat processed_grid_map = postProcessGridMap(grid_map, params);
+  cv::Mat processed_grid_map = postProcessGridMap(grid_map, params);
 
-  return grid_map;
+  return processed_grid_map;
 }
 
 void saveGridMap(const cv::Mat& grid_map,
@@ -653,9 +732,47 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  // Patchwork++ initialization
+  // Patchwork++ initialization - Optimized for casbot data
   patchwork::Params patchwork_parameters;
-  patchwork_parameters.verbose = true;
+  
+  // Sensor parameters - adjust based on your robot
+  patchwork_parameters.sensor_height = 1.2;  // Typical mobile robot sensor height
+  patchwork_parameters.max_range = 80.0;     // Increased for outdoor scenarios  
+  patchwork_parameters.min_range = 0.3;      // Avoid too close points
+  
+  // Core ground segmentation parameters - more conservative
+  patchwork_parameters.num_iter = 3;         // Reduced iterations for speed
+  patchwork_parameters.num_lpr = 20;         // Lower point requirement per ring
+  patchwork_parameters.num_min_pts = 10;     // Minimum points for ground estimation
+  
+  // Ground detection thresholds - stricter for better precision
+  patchwork_parameters.th_seeds = 0.5;       // Seed threshold for ground initialization
+  patchwork_parameters.th_dist = 0.3;        // Distance threshold to ground plane
+  patchwork_parameters.th_seeds_v = 0.4;     // Vertical seed threshold
+  patchwork_parameters.th_dist_v = 0.3;      // Vertical distance threshold
+  
+  // Normal vector thresholds
+  patchwork_parameters.uprightness_thr = 0.707;  // cos(45°) for stricter ground normal
+  patchwork_parameters.adaptive_seed_selection_margin = -1.2;  // Adaptive margin
+
+  // Ring and zone configuration - default proven settings
+  patchwork_parameters.num_zones = 4;
+  patchwork_parameters.num_sectors_each_zone = {16, 32, 54, 32};
+  patchwork_parameters.num_rings_each_zone = {2, 4, 4, 4};
+  patchwork_parameters.elevation_thr = {0.523, 0.746, 0.879, 1.125};
+  patchwork_parameters.flatness_thr = {0.0005, 0.000725, 0.001, 0.001};
+
+  // Advanced features
+  patchwork_parameters.enable_RNR = true;    // Enable Reflected Noise Removal
+  patchwork_parameters.enable_TGR = true;    // Enable Temporal Ground Revert
+  patchwork_parameters.enable_RVPF = true;   // Enable Regional Vertical Plane Fitting
+  patchwork_parameters.RNR_ver_angle_thr = -15.0;
+  patchwork_parameters.RNR_intensity_thr = 0.2;
+  
+  patchwork_parameters.num_rings_of_interest = 4;
+  patchwork_parameters.max_flatness_storage = 1000;
+  patchwork_parameters.max_elevation_storage = 1000;
+  patchwork_parameters.verbose = true;  
   patchwork::PatchWorkpp Patchworkpp(patchwork_parameters);
 
   // Load point cloud
