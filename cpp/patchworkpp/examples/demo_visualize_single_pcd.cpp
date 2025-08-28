@@ -314,6 +314,55 @@ GridMapParams calculateOptimalParams(const Eigen::MatrixX3f& ground_points,
   return params;
 }
 
+// 优化外边界轮廓
+cv::Mat smoothOuterBoundaries(const cv::Mat& obstacles_mask) {
+  cv::Mat smoothed_obstacles = obstacles_mask.clone();
+  
+  std::cout << "  Smoothing outer boundaries..." << std::endl;
+  
+  // 1. 寻找所有连通域
+  std::vector<std::vector<cv::Point>> contours;
+  std::vector<cv::Vec4i> hierarchy;
+  cv::findContours(obstacles_mask, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  
+  // 2. 对每个连通域进行轮廓优化
+  cv::Mat result = cv::Mat::zeros(obstacles_mask.size(), CV_8UC1);
+  
+  for (size_t i = 0; i < contours.size(); i++) {
+    if (contours[i].size() < 5) continue; // 跳过太小的轮廓
+    
+    // 2.1 多边形逼近平滑轮廓
+    std::vector<cv::Point> approx_contour;
+    double epsilon = 0.02 * cv::arcLength(contours[i], true); // 自适应精度
+    cv::approxPolyDP(contours[i], approx_contour, epsilon, true);
+    
+    // 2.2 对于大型建筑物，使用更精细的平滑
+    if (cv::contourArea(contours[i]) > 500) { // 50平方米以上的大建筑
+      // 使用更小的epsilon获得更精细的轮廓
+      epsilon = 0.01 * cv::arcLength(contours[i], true);
+      cv::approxPolyDP(contours[i], approx_contour, epsilon, true);
+    }
+    
+    // 2.3 填充优化后的轮廓
+    std::vector<std::vector<cv::Point>> smooth_contours;
+    smooth_contours.push_back(approx_contour);
+    cv::fillPoly(result, smooth_contours, cv::Scalar(255));
+  }
+  
+  // 3. 轻微的形态学平滑去除小锯齿
+  cv::Mat smooth_kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
+  cv::morphologyEx(result, result, cv::MORPH_CLOSE, smooth_kernel);
+  cv::morphologyEx(result, result, cv::MORPH_OPEN, smooth_kernel);
+  
+  int before_pixels = cv::countNonZero(obstacles_mask);
+  int after_pixels = cv::countNonZero(result);
+  std::cout << "  Boundary smoothing: " << before_pixels << " -> " << after_pixels 
+            << " pixels (" << ((after_pixels - before_pixels) * 100.0 / before_pixels) 
+            << "% change)" << std::endl;
+  
+  return result;
+}
+
 // 连接断开的边界线
 cv::Mat connectBoundaries(const cv::Mat& obstacles_mask) {
   cv::Mat connected_obstacles = obstacles_mask.clone();
@@ -424,6 +473,9 @@ cv::Mat postProcessGridMap(const cv::Mat& grid_map, const GridMapParams& params)
 
   // 4.6. 边界连续性优化 - 连接断开的建筑物边界
   cleaned_obstacles = connectBoundaries(cleaned_obstacles);
+
+  // 4.7. 外边界平滑优化 - 优化建筑物外轮廓
+  cleaned_obstacles = smoothOuterBoundaries(cleaned_obstacles);
 
   // 5. 可选：对障碍物进行轻微膨胀以提供安全边界
   cv::Mat safety_obstacles;

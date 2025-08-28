@@ -1,0 +1,32 @@
+# Patchwork++ Default Parameters for casbot data
+# Optimized configuration based on previous tuning
+
+# Patchwork++ Core Parameters
+sensor_height=1.2
+th_seeds=0.5
+th_dist=0.3
+th_seeds_v=0.4
+th_dist_v=0.3
+uprightness_thr=0.707
+max_range=80.0
+min_range=0.3
+
+# Grid Map Parameters
+height_threshold=3.5
+resolution=0.1
+
+# Morphological Parameters
+opening_size=2
+closing_size=4
+dilation_size=1
+
+# Boundary Optimization Parameters
+enable_boundary_connect=true
+enable_boundary_smooth=true
+boundary_epsilon=0.02
+
+# Output Parameters
+output_path=output
+save_pgm=true
+save_yaml=true
+save_png=true
