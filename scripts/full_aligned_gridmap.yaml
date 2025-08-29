@@ -1,0 +1,21 @@
+image: full_aligned_gridmap.pgm
+resolution: 0.1
+origin: [-15.000000, -49.000000, 0.0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+# Coordinate Transform Information
+pcl_to_grid_transform:
+  resolution: 0.1
+  grid_origin_world_x: -15.000000
+  grid_origin_world_y: -49.000000
+  world_bounds: [-15.000000, 134.300000, -49.000000, 43.200000]
+  coordinate_system: top_left_origin
+  origin_pixel_position: [150, 490]
+# Grid map coordinate system:
+# - Origin at top-left corner (same as PNG)
+# - X-axis points right
+# - Y-axis points down
+# - Grid (0,0) = World (-15.000000, -49.000000)
+# - Point cloud origin (0,0,0) projects to pixel (150, 490)
+# - Values: 0=ground, 100=unknown, 200=obstacle
