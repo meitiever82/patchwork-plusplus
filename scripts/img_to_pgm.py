@@ -2,7 +2,7 @@
 """
 PNG to PGM Grid Map Converter with Origin Alignment
 Converts PNG format grid maps to PGM format with proper world coordinate handling
-and alignment based on known origin pixel position.
+and alignment based on known origin pixel position or automatic detection.
 Compatible with ROS map_server format and vSLAM coordinate systems.
 """
 
@@ -34,6 +34,223 @@ class GridMapParams:
         # Derived parameters
         self.map_width = 0.0
         self.map_height = 0.0
+
+
+def detect_origin_marker(png_image: np.ndarray, debug: bool = False) -> Optional[Tuple[int, int]]:
+    """
+    Automatically detect origin marker in PNG image based on color analysis.
+    Looks for distinctive colored regions that represent the origin marker.
+    
+    Args:
+        png_image: Input PNG image (grayscale or color)
+        debug: If True, save debug images and print additional info
+        
+    Returns:
+        (pixel_x, pixel_y) coordinates of detected origin, or None if not found
+    """
+    if len(png_image.shape) == 3:
+        # Convert BGR to RGB if it's a color image
+        png_image_rgb = cv2.cvtColor(png_image, cv2.COLOR_BGR2RGB)
+        # Also keep grayscale version
+        gray = cv2.cvtColor(png_image, cv2.COLOR_BGR2GRAY)
+    else:
+        # Already grayscale
+        gray = png_image.copy()
+        png_image_rgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+    
+    height, width = gray.shape
+    print(f"Analyzing image: {width}x{height} pixels")
+    
+    # Method 1: Look for extreme values (very high or very low intensity)
+    # This works when origin marker has extreme height values
+    extreme_threshold_low = 20    # Very dark pixels
+    extreme_threshold_high = 235  # Very bright pixels
+    
+    # Find extreme dark regions
+    dark_mask = (gray <= extreme_threshold_low)
+    # Find extreme bright regions  
+    bright_mask = (gray >= extreme_threshold_high)
+    
+    candidates = []
+    
+    # Check dark regions
+    if np.any(dark_mask):
+        dark_regions = find_circular_regions(dark_mask, min_area=50, max_area=2000)
+        for region in dark_regions:
+            candidates.append(('dark', region))
+            if debug:
+                print(f"Found dark region: center={region['center']}, area={region['area']}")
+    
+    # Check bright regions
+    if np.any(bright_mask):
+        bright_regions = find_circular_regions(bright_mask, min_area=50, max_area=2000)
+        for region in bright_regions:
+            candidates.append(('bright', region))
+            if debug:
+                print(f"Found bright region: center={region['center']}, area={region['area']}")
+    
+    # Method 2: Look for color outliers in RGB image
+    if len(png_image.shape) == 3:
+        color_candidates = find_color_outliers(png_image_rgb, debug=debug)
+        for region in color_candidates:
+            candidates.append(('color', region))
+            if debug:
+                print(f"Found color outlier: center={region['center']}, area={region['area']}")
+    
+    if not candidates:
+        print("No origin marker candidates found")
+        return None
+    
+    # Select the best candidate (prefer isolated, circular regions)
+    best_candidate = select_best_candidate(candidates, width, height, debug=debug)
+    
+    if best_candidate is None:
+        print("No suitable origin marker found")
+        return None
+    
+    origin_x, origin_y = best_candidate['center']
+    print(f"Detected origin marker at pixel: ({origin_x}, {origin_y})")
+    
+    # Save debug image if requested
+    if debug:
+        debug_image = png_image_rgb.copy()
+        cv2.circle(debug_image, (origin_x, origin_y), 15, (255, 0, 255), 3)  # Magenta circle
+        cv2.putText(debug_image, f"Origin ({origin_x},{origin_y})", 
+                   (origin_x + 20, origin_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 255), 2)
+        cv2.imwrite('debug_origin_detection.png', cv2.cvtColor(debug_image, cv2.COLOR_RGB2BGR))
+        print("Debug image saved as 'debug_origin_detection.png'")
+    
+    return origin_x, origin_y
+
+
+def find_circular_regions(mask: np.ndarray, min_area: int = 50, max_area: int = 2000) -> list:
+    """Find approximately circular regions in a binary mask."""
+    # Find contours
+    contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    regions = []
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area < min_area or area > max_area:
+            continue
+            
+        # Check if region is approximately circular
+        perimeter = cv2.arcLength(contour, True)
+        if perimeter == 0:
+            continue
+            
+        circularity = 4 * np.pi * area / (perimeter * perimeter)
+        
+        # Circularity should be close to 1.0 for perfect circles
+        if circularity > 0.6:  # Reasonably circular
+            # Get centroid
+            M = cv2.moments(contour)
+            if M["m00"] != 0:
+                cx = int(M["m10"] / M["m00"])
+                cy = int(M["m01"] / M["m00"])
+                
+                regions.append({
+                    'center': (cx, cy),
+                    'area': area,
+                    'circularity': circularity,
+                    'contour': contour
+                })
+    
+    return regions
+
+
+def find_color_outliers(image_rgb: np.ndarray, debug: bool = False) -> list:
+    """Find color outlier regions that might be origin markers."""
+    height, width = image_rgb.shape[:2]
+    
+    # Convert to HSV for better color analysis
+    hsv = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2HSV)
+    
+    # Define color ranges for potential markers
+    # Blue range (typical for low height values in elevation maps)
+    blue_lower = np.array([100, 50, 50])   # HSV
+    blue_upper = np.array([130, 255, 255])
+    
+    # Red range (typical for high height values)  
+    red_lower1 = np.array([0, 50, 50])
+    red_upper1 = np.array([10, 255, 255])
+    red_lower2 = np.array([170, 50, 50])
+    red_upper2 = np.array([180, 255, 255])
+    
+    regions = []
+    
+    # Check blue regions
+    blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
+    if np.any(blue_mask):
+        blue_regions = find_circular_regions(blue_mask, min_area=30, max_area=1000)
+        regions.extend(blue_regions)
+        if debug and blue_regions:
+            print(f"Found {len(blue_regions)} blue regions")
+    
+    # Check red regions
+    red_mask1 = cv2.inRange(hsv, red_lower1, red_upper1)
+    red_mask2 = cv2.inRange(hsv, red_lower2, red_upper2)
+    red_mask = cv2.bitwise_or(red_mask1, red_mask2)
+    if np.any(red_mask):
+        red_regions = find_circular_regions(red_mask, min_area=30, max_area=1000)
+        regions.extend(red_regions)
+        if debug and red_regions:
+            print(f"Found {len(red_regions)} red regions")
+    
+    return regions
+
+
+def select_best_candidate(candidates: list, image_width: int, image_height: int, debug: bool = False) -> Optional[dict]:
+    """Select the best origin marker candidate from detected regions."""
+    if not candidates:
+        return None
+    
+    # Score each candidate
+    scored_candidates = []
+    
+    for candidate_type, region in candidates:
+        score = 0
+        
+        # Prefer more circular regions
+        score += region['circularity'] * 100
+        
+        # Prefer medium-sized regions (not too small, not too large)
+        area = region['area']
+        if 100 <= area <= 800:
+            score += 50
+        elif 50 <= area <= 1500:
+            score += 30
+        else:
+            score += 10
+        
+        # Prefer regions not too close to edges
+        cx, cy = region['center']
+        edge_distance = min(cx, cy, image_width - cx, image_height - cy)
+        if edge_distance > 50:
+            score += 30
+        elif edge_distance > 20:
+            score += 10
+        
+        # Bonus for extreme value regions (dark/bright)
+        if candidate_type in ['dark', 'bright']:
+            score += 20
+            
+        # Bonus for color outlier regions
+        if candidate_type == 'color':
+            score += 15
+        
+        scored_candidates.append((score, region))
+        
+        if debug:
+            print(f"Candidate at {region['center']}: type={candidate_type}, "
+                  f"area={region['area']:.1f}, circularity={region['circularity']:.2f}, score={score:.1f}")
+    
+    # Return the highest scoring candidate
+    if scored_candidates:
+        scored_candidates.sort(key=lambda x: x[0], reverse=True)
+        return scored_candidates[0][1]
+    
+    return None
 
 
 def png_to_grid_values(png_image: np.ndarray, params: GridMapParams) -> np.ndarray:
@@ -256,17 +473,57 @@ def convert_png_to_pgm_with_origin(png_path: str, output_path: str, params: Grid
     print(f"  Resolution: {params.resolution} m/pixel")
 
 
+def convert_png_to_pgm_with_auto_origin(png_path: str, output_path: str, params: GridMapParams,
+                                       origin_world_x: float = 0.0, origin_world_y: float = 0.0,
+                                       debug: bool = False) -> None:
+    """Main conversion function with automatic origin detection."""
+    
+    # Load PNG image
+    if not os.path.exists(png_path):
+        raise FileNotFoundError(f"PNG file not found: {png_path}")
+    
+    # Read image (try color first, fallback to grayscale)
+    png_image = cv2.imread(png_path, cv2.IMREAD_COLOR)
+    if png_image is None:
+        png_image = cv2.imread(png_path, cv2.IMREAD_GRAYSCALE)
+        if png_image is None:
+            raise ValueError(f"Cannot read PNG image: {png_path}")
+    
+    print(f"Loaded PNG image: {png_image.shape[1]}x{png_image.shape[0]} pixels")
+    
+    # Automatically detect origin marker
+    origin_coords = detect_origin_marker(png_image, debug=debug)
+    if origin_coords is None:
+        raise ValueError("Could not automatically detect origin marker in image. "
+                        "Please use manual mode with --origin-pixel-x and --origin-pixel-y arguments.")
+    
+    origin_pixel_x, origin_pixel_y = origin_coords
+    print(f"Auto-detected origin at pixel: ({origin_pixel_x}, {origin_pixel_y})")
+    
+    # Continue with the original conversion process
+    convert_png_to_pgm_with_origin(png_path, output_path, params,
+                                  origin_pixel_x, origin_pixel_y,
+                                  origin_world_x, origin_world_y)
+
+
 def main():
     # python img_to_pgm.py full.jpg full --resolution 0.1 --origin-pixel-x 150 --origin-pixel-y 490
+    # python img_to_pgm.py full.jpg full --resolution 0.1 --auto-detect-origin
     parser = argparse.ArgumentParser(description="Convert PNG grid map to PGM format with origin-based alignment")
     parser.add_argument("input_png", help="Input PNG file path")
     parser.add_argument("output_path", help="Output file path (without extension)")
     
-    # Origin-based alignment parameters (required)
-    parser.add_argument("--origin-pixel-x", type=int, required=True,
-                       help="X pixel coordinate where point cloud origin (0,0,0) projects to in PNG")
-    parser.add_argument("--origin-pixel-y", type=int, required=True,
-                       help="Y pixel coordinate where point cloud origin (0,0,0) projects to in PNG")
+    # Mode selection
+    mode_group = parser.add_mutually_exclusive_group(required=True)
+    mode_group.add_argument("--auto-detect-origin", action="store_true",
+                           help="Automatically detect origin marker in the image")
+    mode_group.add_argument("--origin-pixel-x", type=int,
+                           help="X pixel coordinate where point cloud origin (0,0,0) projects to in PNG")
+    
+    # Manual mode requires both pixel coordinates
+    parser.add_argument("--origin-pixel-y", type=int,
+                       help="Y pixel coordinate where point cloud origin (0,0,0) projects to in PNG "
+                            "(required when using --origin-pixel-x)")
     
     # World coordinate of the origin (optional, defaults to 0,0)
     parser.add_argument("--origin-world-x", type=float, default=0.0,
@@ -283,8 +540,16 @@ def main():
                        help="Grid value for unknown space (default: 100)")
     parser.add_argument("--obstacle-value", type=int, default=200,
                        help="Grid value for obstacles (default: 200)")
+    
+    # Debug options
+    parser.add_argument("--debug", action="store_true",
+                       help="Enable debug mode with additional output and debug images")
 
     args = parser.parse_args()
+    
+    # Validate manual mode arguments
+    if args.origin_pixel_x is not None and args.origin_pixel_y is None:
+        parser.error("--origin-pixel-y is required when using --origin-pixel-x")
     
     # Create parameters object
     params = GridMapParams(
@@ -295,21 +560,36 @@ def main():
     )
     
     try:
-        convert_png_to_pgm_with_origin(
-            args.input_png, 
-            args.output_path, 
-            params,
-            args.origin_pixel_x,
-            args.origin_pixel_y,
-            args.origin_world_x,
-            args.origin_world_y
-        )
+        if args.auto_detect_origin:
+            # Automatic origin detection mode
+            print("=== Automatic Origin Detection Mode ===")
+            convert_png_to_pgm_with_auto_origin(
+                args.input_png, 
+                args.output_path, 
+                params,
+                args.origin_world_x,
+                args.origin_world_y,
+                args.debug
+            )
+        else:
+            # Manual origin specification mode
+            print("=== Manual Origin Specification Mode ===")
+            convert_png_to_pgm_with_origin(
+                args.input_png, 
+                args.output_path, 
+                params,
+                args.origin_pixel_x,
+                args.origin_pixel_y,
+                args.origin_world_x,
+                args.origin_world_y
+            )
+        
         print("\nConversion completed successfully!")
-        print("\nUsage example:")
-        print(f"python {os.path.basename(__file__)} gridmap.png output \\")
-        print(f"    --resolution 0.1 \\")
-        print(f"    --origin-pixel-x 150 --origin-pixel-y 200 \\")
-        print(f"    --origin-world-x 0.0 --origin-world-y 0.0")
+        print("\nUsage examples:")
+        print("# Automatic detection:")
+        print(f"python {os.path.basename(__file__)} gridmap.png output --resolution 0.1 --auto-detect-origin")
+        print("# Manual specification:")
+        print(f"python {os.path.basename(__file__)} gridmap.png output --resolution 0.1 --origin-pixel-x 150 --origin-pixel-y 200")
         
     except Exception as e:
         print(f"Error: {e}")
