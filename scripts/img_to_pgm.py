@@ -257,6 +257,7 @@ def convert_png_to_pgm_with_origin(png_path: str, output_path: str, params: Grid
 
 
 def main():
+    # python img_to_pgm.py full.jpg full --resolution 0.1 --origin-pixel-x 150 --origin-pixel-y 490
     parser = argparse.ArgumentParser(description="Convert PNG grid map to PGM format with origin-based alignment")
     parser.add_argument("input_png", help="Input PNG file path")
     parser.add_argument("output_path", help="Output file path (without extension)")
