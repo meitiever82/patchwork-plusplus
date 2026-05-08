@@ -17,4 +17,4 @@ demo = [
 ]
 
 [tool.scikit-build]
-cmake.args = ["-DINCLUDE_PYTHON_WRAPPER=true"]
+cmake.version = ">=3.18,<4"
