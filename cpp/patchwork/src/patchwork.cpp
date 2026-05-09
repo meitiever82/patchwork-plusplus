@@ -129,6 +129,34 @@ void PatchWork::extract_initial_seeds(int zone_idx,
   }
 }
 
+PatchStatus PatchWork::determine_gle_status(int zone_idx, int ring_idx,
+                                            const PCAFeature& feature) const {
+  // Uprightness check
+  if (std::abs(feature.normal_(2)) < params_.uprightness_thr) {
+    return PatchStatus::TooTilted;
+  }
+
+  // The first elevation_thr.size() tiers get tier-specific elevation/flatness thresholds.
+  const int tier = (zone_idx == 0) ? ring_idx : zone_idx;
+  if (tier < static_cast<int>(params_.elevation_thr.size())) {
+    const double mean_z = feature.mean_(2);
+    if (mean_z > params_.elevation_thr[tier]) {
+      // Recoverable if the patch is very flat
+      if (feature.singular_values_(2) < params_.flatness_thr[tier]) {
+        return PatchStatus::FlatEnough;
+      }
+      return PatchStatus::TooHighElevation;
+    }
+    return PatchStatus::UprightEnough;
+  }
+
+  // Beyond tier coverage: optional global elevation guard
+  if (params_.using_global_thr && feature.mean_(2) > params_.global_elevation_thr) {
+    return PatchStatus::GloballyTooHighElevation;
+  }
+  return PatchStatus::UprightEnough;
+}
+
 void PatchWork::estimateGround(const Eigen::MatrixXf& /*cloud*/) {}
 
 Eigen::MatrixX3f PatchWork::getGround() const { return ground_mat_; }
