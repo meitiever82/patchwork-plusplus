@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 
 #include "patchwork/patchwork.h"
@@ -31,6 +32,39 @@ void PatchWork::flush() {
     for (auto& ring : zone)
       for (auto& sector : ring)
         sector.clear();
+}
+
+void PatchWork::pc2regionwise_patches(const std::vector<PointXYZ>& src) {
+  for (int idx = 0; idx < static_cast<int>(src.size()); ++idx) {
+    const auto& p = src[idx];
+    double r     = xy2radius(p.x, p.y);
+    double theta = xy2theta(p.x, p.y);
+
+    if (r < params_.min_range || r > params_.max_range) continue;
+
+    // Determine zone by min_ranges (last index whose min_range <= r)
+    int zone = 0;
+    for (int z = params_.num_zones - 1; z >= 0; --z) {
+      if (r >= params_.min_ranges[z]) { zone = z; break; }
+    }
+    if (zone < 0 || zone >= params_.num_zones) continue;
+
+    // Within zone, ring index proportional to (r - min_ranges[z]) / ring_width
+    double ring_width = (zone + 1 < params_.num_zones)
+                        ? (params_.min_ranges[zone + 1] - params_.min_ranges[zone])
+                              / params_.num_rings_each_zone[zone]
+                        : (params_.max_range - params_.min_ranges[zone])
+                              / params_.num_rings_each_zone[zone];
+    int ring = std::min<int>(
+        static_cast<int>((r - params_.min_ranges[zone]) / ring_width),
+        params_.num_rings_each_zone[zone] - 1);
+
+    int sector = std::min<int>(
+        static_cast<int>(theta / (2 * M_PI / params_.num_sectors_each_zone[zone])),
+        params_.num_sectors_each_zone[zone] - 1);
+
+    regionwise_patches_[zone][ring][sector].push_back(p);
+  }
 }
 
 void PatchWork::estimateGround(const Eigen::MatrixXf& /*cloud*/) {}
