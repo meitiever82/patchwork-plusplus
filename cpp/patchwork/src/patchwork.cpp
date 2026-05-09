@@ -1,7 +1,20 @@
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 
 #include "patchwork/patchwork.h"
+
+namespace {
+inline Eigen::MatrixX3f to_matrix(const std::vector<patchwork::PointXYZ>& pts) {
+  Eigen::MatrixX3f m(pts.size(), 3);
+  for (size_t i = 0; i < pts.size(); ++i) {
+    m(i, 0) = pts[i].x;
+    m(i, 1) = pts[i].y;
+    m(i, 2) = pts[i].z;
+  }
+  return m;
+}
+}  // namespace
 
 namespace patchwork {
 
@@ -224,13 +237,107 @@ void PatchWork::perform_regionwise_segmentation(int zone_idx, int ring_idx,
   status_out = determine_gle_status(zone_idx, ring_idx, feature);
 }
 
-void PatchWork::estimateGround(const Eigen::MatrixXf& /*cloud*/) {}
+// ---------------------------------------------------------------------------
+// ATAT stubs — bodies filled in C9
+// ---------------------------------------------------------------------------
 
-Eigen::MatrixX3f PatchWork::getGround() const { return ground_mat_; }
-Eigen::MatrixX3f PatchWork::getNonground() const { return nonground_mat_; }
-std::vector<int> PatchWork::getGroundIndices() const { return ground_idx_; }
-std::vector<int> PatchWork::getNongroundIndices() const { return nonground_idx_; }
-double PatchWork::getTimeTaken() const { return time_taken_; }
-double PatchWork::getHeight() const { return sensor_height_; }
+double PatchWork::consensus_set_based_height_estimation(
+    const std::vector<double>& /*candidate_heights*/) {
+  // Filled in C9.
+  return sensor_height_;
+}
+
+void PatchWork::estimate_sensor_height(std::vector<PointXYZ>& /*cloud*/) {
+  // Filled in C9.
+}
+
+// ---------------------------------------------------------------------------
+// materialize() — lazy output matrix/index population
+// ---------------------------------------------------------------------------
+
+void PatchWork::materialize() const {
+  if (!outputs_dirty_) return;
+  ground_mat_    = to_matrix(ground_pts_);
+  nonground_mat_ = to_matrix(nonground_pts_);
+  ground_idx_.clear();
+  nonground_idx_.clear();
+  for (const auto& p : ground_pts_)    ground_idx_.push_back(p.idx);
+  for (const auto& p : nonground_pts_) nonground_idx_.push_back(p.idx);
+  outputs_dirty_ = false;
+}
+
+// ---------------------------------------------------------------------------
+// Public getters
+// ---------------------------------------------------------------------------
+
+Eigen::MatrixX3f PatchWork::getGround()           const { materialize(); return ground_mat_; }
+Eigen::MatrixX3f PatchWork::getNonground()        const { materialize(); return nonground_mat_; }
+std::vector<int> PatchWork::getGroundIndices()    const { materialize(); return ground_idx_; }
+std::vector<int> PatchWork::getNongroundIndices() const { materialize(); return nonground_idx_; }
+double           PatchWork::getTimeTaken()        const { return time_taken_; }
+double           PatchWork::getHeight()           const { return sensor_height_; }
+
+// ---------------------------------------------------------------------------
+// estimateGround — main public entry point
+// ---------------------------------------------------------------------------
+
+void PatchWork::estimateGround(const Eigen::MatrixXf& cloud) {
+  using clock = std::chrono::high_resolution_clock;
+  auto t_start = clock::now();
+
+  // Initialize CZM on first call
+  if (regionwise_patches_.empty()) initialize();
+
+  // 1) Convert input
+  std::vector<PointXYZ> all_points;
+  all_points.reserve(cloud.rows());
+  for (int i = 0; i < cloud.rows(); ++i) {
+    all_points.emplace_back(cloud(i, 0), cloud(i, 1), cloud(i, 2), i);
+  }
+
+  // 2) Quick pre-filter: drop points far below sensor (upstream's noise cutoff)
+  std::vector<PointXYZ> kept;
+  kept.reserve(all_points.size());
+  for (const auto& p : all_points) {
+    if (p.z >= -sensor_height_ - 2.0) kept.push_back(p);
+  }
+
+  // 3) ATAT (auto-tuning sensor height) — implemented in Task C9
+  if (params_.ATAT_ON) estimate_sensor_height(kept);
+
+  // 4) Reset patch buckets, redistribute
+  flush();
+  pc2regionwise_patches(kept);
+
+  // 5) Per-patch segmentation (sequential — was tbb::parallel_for upstream)
+  ground_pts_.clear();
+  nonground_pts_.clear();
+  for (int z = 0; z < params_.num_zones; ++z) {
+    for (int r = 0; r < params_.num_rings_each_zone[z]; ++r) {
+      for (int s = 0; s < params_.num_sectors_each_zone[z]; ++s) {
+        const auto& patch = regionwise_patches_[z][r][s];
+        std::vector<PointXYZ> pg, png;
+        PatchStatus status;
+        perform_regionwise_segmentation(z, r, patch, pg, png, status);
+        switch (status) {
+          case PatchStatus::UprightEnough:
+          case PatchStatus::FlatEnough:
+            ground_pts_.insert(ground_pts_.end(), pg.begin(), pg.end());
+            nonground_pts_.insert(nonground_pts_.end(), png.begin(), png.end());
+            break;
+          default:
+            // Reject the whole patch as nonground
+            nonground_pts_.insert(nonground_pts_.end(), patch.begin(), patch.end());
+        }
+      }
+    }
+  }
+
+  // 6) Mark outputs dirty (actual matrix materialization is lazy)
+  outputs_dirty_ = true;
+
+  auto t_end = clock::now();
+  time_taken_ = std::chrono::duration<double, std::micro>(t_end - t_start).count();
+}
 
 }  // namespace patchwork
