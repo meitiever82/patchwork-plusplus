@@ -36,9 +36,19 @@
 
 > What we need are just minimal dependencies.
 
+**Ubuntu / Debian:**
+
 ```commandline
 sudo apt-get install g++ build-essential libeigen3-dev python3-pip python3-dev cmake -y
 ```
+
+**macOS** (Apple Silicon or Intel):
+
+```commandline
+brew install cmake
+```
+
+Eigen is fetched automatically by CMake, so no extra system package is required on macOS. The build works with the bundled AppleClang toolchain.
 
 </details>
 
@@ -124,7 +134,8 @@ In addition, you can also check the paper of our baseline, Patchwork. ([arXiv][p
 
 ## :triangular_flag_on_post: Tested Environment
 
-- Ubuntu ~~18.04 and~~ 20.04 and 22.04
+- Ubuntu ~~18.04 and~~ 20.04, 22.04, and 24.04
+- macOS 14+ (Apple Silicon)
 - CMake 3.25.1 (>=3.20, min. Required to install Open3D)
   - In `scripts/install_open3d.bash`, the installation of the higher version of CMake is already implemented.
 - Open3D ~~0.15.2~~ 0.18.0

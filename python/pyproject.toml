@@ -15,6 +15,9 @@ dependencies = [
 demo = [
 	"open3d-cpu>=0.17"
 ]
+test = [
+	"pytest"
+]
 
 [tool.scikit-build]
-cmake.args = ["-DINCLUDE_PYTHON_WRAPPER=true"]
+cmake.version = ">=3.18,<4"
