@@ -11,12 +11,13 @@
 **Reference:** Spec at `docs/superpowers/specs/2026-05-09-add-patchwork-classic-algorithm-design.md`. Upstream source at `/Users/fudxo/git/patchwork/include/patchwork/patchwork.hpp` (lines referenced by `up:NNN`).
 
 **Key deliberate deviations from a literal port:**
-1. CZM uses Patchwork++'s parametric form (no `sensor_configs.hpp`, no `zone_models.hpp`).
-2. `tbb::parallel_for` over patches becomes a sequential `for` loop.
-3. Verbose logging via `std::cout` instead of `boost::format` + `RCLCPP_INFO`.
-4. Input is `Eigen::MatrixXf` (N×4), not `pcl::PointCloud<PointXYZI>`.
 
----
+1. CZM uses Patchwork++'s parametric form (no `sensor_configs.hpp`, no `zone_models.hpp`).
+1. `tbb::parallel_for` over patches becomes a sequential `for` loop.
+1. Verbose logging via `std::cout` instead of `boost::format` + `RCLCPP_INFO`.
+1. Input is `Eigen::MatrixXf` (N×4), not `pcl::PointCloud<PointXYZI>`.
+
+______________________________________________________________________
 
 ## File Structure
 
@@ -36,24 +37,27 @@
 | `cpp/CMakeLists.txt` | MODIFY | Project version bump |
 | `README.md` | MODIFY | "Choosing an algorithm" subsection |
 
----
+______________________________________________________________________
 
 ## Branch
 
 All work happens on `feat/patchwork-classic` (already created from current `master` at 306da05). One PR at the end.
 
----
+______________________________________________________________________
 
 ## Phase A — Skeleton & build wiring
 
 ### Task A1: Create empty `cpp/patchwork/` skeleton
 
 **Files:**
+
 - Create: `cpp/patchwork/CMakeLists.txt`
+
 - Create: `cpp/patchwork/include/patchwork/patchwork.h`
+
 - Create: `cpp/patchwork/src/patchwork.cpp`
 
-- [ ] **Step 1: Write the CMakeLists.txt**
+- \[ \] **Step 1: Write the CMakeLists.txt**
 
 ```cmake
 project(patchwork_classic_src)
@@ -82,7 +86,7 @@ install(TARGETS ${CLASSIC_TARGET}
 )
 ```
 
-- [ ] **Step 2: Write the minimal header**
+- \[ \] **Step 2: Write the minimal header**
 
 ```cpp
 // cpp/patchwork/include/patchwork/patchwork.h
@@ -127,7 +131,7 @@ class PatchWork {
 #endif
 ```
 
-- [ ] **Step 3: Write a stub `.cpp`**
+- \[ \] **Step 3: Write a stub `.cpp`**
 
 ```cpp
 // cpp/patchwork/src/patchwork.cpp
@@ -149,7 +153,7 @@ double PatchWork::getHeight() const { return sensor_height_; }
 }  // namespace patchwork
 ```
 
-- [ ] **Step 4: Hook into top-level cpp/CMakeLists.txt**
+- \[ \] **Step 4: Hook into top-level cpp/CMakeLists.txt**
 
 Modify `cpp/CMakeLists.txt`. After the existing `add_subdirectory(patchworkpp)` line (currently line 48), add:
 
@@ -172,7 +176,7 @@ set(CLASSIC_TARGET ground_seg_classic)
 
 (already done in Step 1 above).
 
-- [ ] **Step 5: Configure and build**
+- \[ \] **Step 5: Configure and build**
 
 ```bash
 rm -rf cpp/build
@@ -182,26 +186,27 @@ cmake --build cpp/build -j
 
 Expected: builds both `libground_seg_cores.a` and `libground_seg_classic.a` without errors.
 
-- [ ] **Step 6: Commit**
+- \[ \] **Step 6: Commit**
 
 ```bash
 git add cpp/patchwork/ cpp/CMakeLists.txt
 git commit -m "feat(patchwork): scaffold ground_seg_classic target with empty PatchWork class"
 ```
 
----
+______________________________________________________________________
 
 ## Phase B — C++ unit verification
 
 ### Task B1: Add a C++ smoke test that constructs PatchWork
 
 **Files:**
+
 - Create: `cpp/patchwork/tests/smoke_test.cpp`
 - Modify: `cpp/patchwork/CMakeLists.txt`
 
 The cpp side has no test framework currently. We add a minimal `main()` test compiled only when `BUILD_PATCHWORK_TESTS` is ON. This serves as a compile-time assurance plus a runtime assertion.
 
-- [ ] **Step 1: Add CMake test option**
+- \[ \] **Step 1: Add CMake test option**
 
 Append to `cpp/patchwork/CMakeLists.txt`:
 
@@ -213,7 +218,7 @@ if (BUILD_PATCHWORK_TESTS)
 endif()
 ```
 
-- [ ] **Step 2: Write the smoke test**
+- \[ \] **Step 2: Write the smoke test**
 
 ```cpp
 // cpp/patchwork/tests/smoke_test.cpp
@@ -237,7 +242,7 @@ int main() {
 }
 ```
 
-- [ ] **Step 3: Build with tests on, run**
+- \[ \] **Step 3: Build with tests on, run**
 
 ```bash
 cmake -Bcpp/build cpp/ -DBUILD_PATCHWORK_TESTS=ON
@@ -247,23 +252,24 @@ cmake --build cpp/build -j
 
 Expected: `patchwork smoke: ok`.
 
-- [ ] **Step 4: Commit**
+- \[ \] **Step 4: Commit**
 
 ```bash
 git add cpp/patchwork/CMakeLists.txt cpp/patchwork/tests/smoke_test.cpp
 git commit -m "test(patchwork): add C++ smoke test for empty input handling"
 ```
 
----
+______________________________________________________________________
 
 ## Phase C — Algorithm port
 
 The algorithm body comes from `/Users/fudxo/git/patchwork/include/patchwork/patchwork.hpp`. Each task ports one logical group of functions and verifies the build still succeeds. The runtime smoke test (`patchwork_smoke`) keeps passing because we feed empty input until Phase D.
 
 When this plan says "port lines X–Y from upstream", the engineer should:
+
 1. Open `/Users/fudxo/git/patchwork/include/patchwork/patchwork.hpp` at those lines
-2. Translate the body, replacing the patterns in the table below
-3. Compile after each function
+1. Translate the body, replacing the patterns in the table below
+1. Compile after each function
 
 ### Translation cheat sheet
 
@@ -301,9 +307,10 @@ target_link_libraries(${CLASSIC_TARGET} Eigen3::Eigen ground_seg_cores)
 ### Task C1: Port full PatchworkParams + private state members
 
 **Files:**
+
 - Modify: `cpp/patchwork/include/patchwork/patchwork.h`
 
-- [ ] **Step 1: Replace the minimal PatchworkParams with the full struct**
+- \[ \] **Step 1: Replace the minimal PatchworkParams with the full struct**
 
 Source: `up:119-148` (declare_parameter calls show every field with type and default). Translate to:
 
@@ -349,7 +356,7 @@ struct PatchworkParams {
 };
 ```
 
-- [ ] **Step 2: Add private state members to PatchWork**
+- \[ \] **Step 2: Add private state members to PatchWork**
 
 Mirror upstream `up:196-248` selectively. Drop ROS-only fields. Add:
 
@@ -386,7 +393,7 @@ Mirror upstream `up:196-248` selectively. Drop ROS-only fields. Add:
   // ... more added in subsequent tasks
 ```
 
-- [ ] **Step 3: Build, run smoke**
+- \[ \] **Step 3: Build, run smoke**
 
 ```bash
 cmake --build cpp/build -j && ./cpp/build/patchwork/patchwork_smoke
@@ -394,7 +401,7 @@ cmake --build cpp/build -j && ./cpp/build/patchwork/patchwork_smoke
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- \[ \] **Step 4: Commit**
 
 ```bash
 git add cpp/patchwork/include/patchwork/patchwork.h
@@ -404,11 +411,12 @@ git commit -m "feat(patchwork): port full PatchworkParams and private state"
 ### Task C2: Port `initialize()`, `flush()`, polar coord helpers
 
 **Files:**
+
 - Modify: `cpp/patchwork/src/patchwork.cpp`
 
 Source: `up:282-323` for initialize/flush; `up:683-700` for xy2theta/xy2radius.
 
-- [ ] **Step 1: Implement helpers**
+- \[ \] **Step 1: Implement helpers**
 
 ```cpp
 double PatchWork::xy2theta(double x, double y) const {
@@ -421,7 +429,7 @@ double PatchWork::xy2radius(double x, double y) const {
 }
 ```
 
-- [ ] **Step 2: Implement `initialize()`**
+- \[ \] **Step 2: Implement `initialize()`**
 
 ```cpp
 void PatchWork::initialize() {
@@ -447,7 +455,7 @@ using RegionwisePatches = std::vector<Zone>;
 
 (Update Task C1's typedef block accordingly.)
 
-- [ ] **Step 3: Implement `flush()`**
+- \[ \] **Step 3: Implement `flush()`**
 
 ```cpp
 void PatchWork::flush() {
@@ -458,7 +466,7 @@ void PatchWork::flush() {
 }
 ```
 
-- [ ] **Step 4: Build**
+- \[ \] **Step 4: Build**
 
 ```bash
 cmake --build cpp/build -j
@@ -466,7 +474,7 @@ cmake --build cpp/build -j
 
 Expected: success.
 
-- [ ] **Step 5: Commit**
+- \[ \] **Step 5: Commit**
 
 ```bash
 git add cpp/patchwork/src/patchwork.cpp cpp/patchwork/include/patchwork/patchwork.h
@@ -476,11 +484,12 @@ git commit -m "feat(patchwork): port CZM init, flush, and polar coord helpers"
 ### Task C3: Port `pc2regionwise_patches`
 
 **Files:**
+
 - Modify: `cpp/patchwork/src/patchwork.cpp`
 
 Source: `up:702-712`. The upstream uses sensor-config-derived ring assignment (`zone_model_.ring_idx(...)`). We rewrite to use parametric ranges.
 
-- [ ] **Step 1: Implement**
+- \[ \] **Step 1: Implement**
 
 ```cpp
 void PatchWork::pc2regionwise_patches(const std::vector<PointXYZ>& src) {
@@ -517,13 +526,13 @@ void PatchWork::pc2regionwise_patches(const std::vector<PointXYZ>& src) {
 }
 ```
 
-- [ ] **Step 2: Build**
+- \[ \] **Step 2: Build**
 
 ```bash
 cmake --build cpp/build -j
 ```
 
-- [ ] **Step 3: Commit**
+- \[ \] **Step 3: Commit**
 
 ```bash
 git add cpp/patchwork/src/patchwork.cpp
@@ -533,11 +542,12 @@ git commit -m "feat(patchwork): port pc2regionwise_patches with parametric CZM"
 ### Task C4: Port `estimate_plane_` (PCA fit)
 
 **Files:**
+
 - Modify: `cpp/patchwork/src/patchwork.cpp`, `cpp/patchwork/include/patchwork/patchwork.h`
 
 Source: `up:325-351`. PCA on a patch's seed points. Return PCAFeature struct.
 
-- [ ] **Step 1: Add PCAFeature struct to header**
+- \[ \] **Step 1: Add PCAFeature struct to header**
 
 In `cpp/patchwork/include/patchwork/patchwork.h`, before `class PatchWork`, add:
 
@@ -555,7 +565,7 @@ struct PCAFeature {
 
 And declare `void estimate_plane(const std::vector<PointXYZ>& seeds, PCAFeature& out);` as a private method.
 
-- [ ] **Step 2: Implement**
+- \[ \] **Step 2: Implement**
 
 Translate `up:325-351`. Pseudocode:
 
@@ -582,7 +592,7 @@ void PatchWork::estimate_plane(const std::vector<PointXYZ>& seeds, PCAFeature& o
 }
 ```
 
-- [ ] **Step 3: Build, commit**
+- \[ \] **Step 3: Build, commit**
 
 ```bash
 cmake --build cpp/build -j
@@ -593,11 +603,12 @@ git commit -m "feat(patchwork): port estimate_plane PCA fit"
 ### Task C5: Port `extract_initial_seeds_`
 
 **Files:**
+
 - Modify: `cpp/patchwork/src/patchwork.cpp`, `cpp/patchwork/include/patchwork/patchwork.h`
 
 Source: `up:353-393`. LPR-based seed selection.
 
-- [ ] **Step 1: Declare and implement**
+- \[ \] **Step 1: Declare and implement**
 
 Header (private):
 
@@ -642,7 +653,7 @@ void PatchWork::extract_initial_seeds(int zone_idx,
 }
 ```
 
-- [ ] **Step 2: Build, commit**
+- \[ \] **Step 2: Build, commit**
 
 ```bash
 cmake --build cpp/build -j
@@ -653,11 +664,12 @@ git commit -m "feat(patchwork): port extract_initial_seeds with adaptive margin"
 ### Task C6: Port `determine_ground_likelihood_estimation_status` (GLE check)
 
 **Files:**
+
 - Modify: `cpp/patchwork/src/patchwork.cpp`, `cpp/patchwork/include/patchwork/patchwork.h`
 
 Source: `up:809-836`. Classifies a patch as ground/nonground using uprightness + elevation + flatness.
 
-- [ ] **Step 1: Add status enum to header**
+- \[ \] **Step 1: Add status enum to header**
 
 ```cpp
 enum class PatchStatus {
@@ -671,7 +683,7 @@ enum class PatchStatus {
 };
 ```
 
-- [ ] **Step 2: Declare and implement**
+- \[ \] **Step 2: Declare and implement**
 
 Header (private):
 
@@ -709,7 +721,7 @@ PatchStatus PatchWork::determine_gle_status(int zone_idx, int ring_idx,
 }
 ```
 
-- [ ] **Step 3: Build, commit**
+- \[ \] **Step 3: Build, commit**
 
 ```bash
 cmake --build cpp/build -j
@@ -720,11 +732,12 @@ git commit -m "feat(patchwork): port GLE status classifier"
 ### Task C7: Port `perform_regionwise_ground_segmentation` (per-patch loop)
 
 **Files:**
+
 - Modify: `cpp/patchwork/src/patchwork.cpp`, `cpp/patchwork/include/patchwork/patchwork.h`
 
 Source: `up:715-806`. Per-patch: sort by z, extract seeds, fit plane, refit num_iter times, classify.
 
-- [ ] **Step 1: Declare and implement**
+- \[ \] **Step 1: Declare and implement**
 
 Header (private):
 
@@ -739,14 +752,14 @@ void perform_regionwise_segmentation(int zone_idx, int ring_idx,
 Body — translate the upstream function structure:
 
 1. Skip if `patch.size() < num_min_pts`. Set `status_out = FewPoints` and put the entire patch into `patch_nonground`.
-2. Sort patch by z.
-3. Call `extract_initial_seeds`.
-4. Loop `num_iter` times: estimate plane, partition points by `(p - mean) · normal < th_dist_d_` into ground/nonground.
-5. After final iteration, call `determine_gle_status`.
+1. Sort patch by z.
+1. Call `extract_initial_seeds`.
+1. Loop `num_iter` times: estimate plane, partition points by `(p - mean) · normal < th_dist_d_` into ground/nonground.
+1. After final iteration, call `determine_gle_status`.
 
 Skip the upstream's `pcl::PointCloud` membership games; we're operating on `std::vector<PointXYZ>`.
 
-- [ ] **Step 2: Build, commit**
+- \[ \] **Step 2: Build, commit**
 
 ```bash
 cmake --build cpp/build -j
@@ -757,11 +770,12 @@ git commit -m "feat(patchwork): port per-patch ground segmentation loop"
 ### Task C8: Port `estimate_ground` (main entry)
 
 **Files:**
+
 - Modify: `cpp/patchwork/src/patchwork.cpp`, `cpp/patchwork/include/patchwork/patchwork.h`
 
 Source: `up:528-680`. Main entry that ties everything together.
 
-- [ ] **Step 1: Implement `estimateGround`**
+- \[ \] **Step 1: Implement `estimateGround`**
 
 The upstream signature is `estimate_ground(in, ground, nonground)`. Ours is `estimateGround(const Eigen::MatrixXf&)` and getters. Rewrite so that `estimateGround` populates `ground_pts_` / `nonground_pts_` / index vectors and starts a timer.
 
@@ -828,7 +842,7 @@ void PatchWork::estimateGround(const Eigen::MatrixXf& cloud) {
 }
 ```
 
-- [ ] **Step 2: Implement getters with lazy materialization**
+- \[ \] **Step 2: Implement getters with lazy materialization**
 
 In the header, mark the cached output members `mutable`, plus `mutable bool outputs_dirty_`. Then the materialize helper can be `const`. Updated header excerpt:
 
@@ -879,13 +893,13 @@ double PatchWork::getTimeTaken() const { return time_taken_; }
 double PatchWork::getHeight()    const { return sensor_height_; }
 ```
 
-- [ ] **Step 3: Build, run smoke test (still empty input — should succeed)**
+- \[ \] **Step 3: Build, run smoke test (still empty input — should succeed)**
 
 ```bash
 cmake --build cpp/build -j && ./cpp/build/patchwork/patchwork_smoke
 ```
 
-- [ ] **Step 4: Commit**
+- \[ \] **Step 4: Commit**
 
 ```bash
 git add cpp/patchwork/
@@ -895,24 +909,25 @@ git commit -m "feat(patchwork): port estimate_ground main pipeline"
 ### Task C9: Port `estimate_sensor_height` (ATAT)
 
 **Files:**
+
 - Modify: `cpp/patchwork/src/patchwork.cpp`, `cpp/patchwork/include/patchwork/patchwork.h`
 
 Source: `up:453-525` for `estimate_sensor_height` and `up:394-451` for `consensus_set_based_height_estimation`.
 
-- [ ] **Step 1: Declare both methods (private)**
+- \[ \] **Step 1: Declare both methods (private)**
 
 ```cpp
 void   estimate_sensor_height(std::vector<PointXYZ>& cloud);
 double consensus_set_based_height_estimation(const std::vector<double>& candidate_heights);
 ```
 
-- [ ] **Step 2: Implement**
+- \[ \] **Step 2: Implement**
 
 The consensus algorithm picks heights within `noise_bound` of each other and averages the largest cluster. Translate `up:394-451` literally — it's pure math, no PCL.
 
 `estimate_sensor_height` (`up:453-525`) sorts points by xy distance, picks ones within `max_h_for_ATAT` of expected ground (using current `sensor_height_`), buckets them by sector, computes per-sector lowest-z, runs consensus on those candidates, and updates `sensor_height_`.
 
-- [ ] **Step 3: Build, commit**
+- \[ \] **Step 3: Build, commit**
 
 ```bash
 cmake --build cpp/build -j
@@ -920,16 +935,17 @@ git add cpp/patchwork/
 git commit -m "feat(patchwork): port ATAT (auto-tuning sensor height)"
 ```
 
----
+______________________________________________________________________
 
 ## Phase D — Python bindings
 
 ### Task D1: Wire ground_seg_classic into the python module
 
 **Files:**
+
 - Modify: `python/CMakeLists.txt`
 
-- [ ] **Step 1: Add classic to add_subdirectory and link**
+- \[ \] **Step 1: Add classic to add_subdirectory and link**
 
 `python/CMakeLists.txt` already includes `cpp/` via `add_subdirectory(.../../cpp ...)`. That subdir now adds both targets. Update the `target_link_libraries` line:
 
@@ -939,7 +955,7 @@ target_link_libraries(pypatchworkpp PUBLIC
     ${PARENT_PROJECT_NAME}::ground_seg_classic)
 ```
 
-- [ ] **Step 2: Verify pip install still works**
+- \[ \] **Step 2: Verify pip install still works**
 
 ```bash
 cd /tmp && rm -rf pkgtest_d1 && python3 -m venv pkgtest_d1
@@ -951,7 +967,7 @@ python -c "import pypatchworkpp; print(dir(pypatchworkpp))"
 
 Expected: prints module symbols (still only the patchworkpp class until Task D2).
 
-- [ ] **Step 3: Commit**
+- \[ \] **Step 3: Commit**
 
 ```bash
 git add python/CMakeLists.txt
@@ -961,9 +977,10 @@ git commit -m "build(python): link classic ground_seg target into pypatchworkpp 
 ### Task D2: Add pybind11 bindings for PatchworkParams + patchwork
 
 **Files:**
+
 - Modify: `python/patchworkpp/pybinding.cpp`
 
-- [ ] **Step 1: Add include and bindings**
+- \[ \] **Step 1: Add include and bindings**
 
 Edit `python/patchworkpp/pybinding.cpp`. Add at the top:
 
@@ -1012,7 +1029,7 @@ py::class_<patchwork::PatchWork>(m, "patchwork")
     .def("getHeight",          &patchwork::PatchWork::getHeight);
 ```
 
-- [ ] **Step 2: Reinstall and probe**
+- \[ \] **Step 2: Reinstall and probe**
 
 ```bash
 pip install --force-reinstall --no-deps /Users/fudxo/git/patchwork-plusplus/python/
@@ -1021,7 +1038,7 @@ python -c "import pypatchworkpp; pp=pypatchworkpp.patchwork(pypatchworkpp.Patchw
 
 Expected: `ok`.
 
-- [ ] **Step 3: Commit**
+- \[ \] **Step 3: Commit**
 
 ```bash
 git add python/patchworkpp/pybinding.cpp
@@ -1031,9 +1048,10 @@ git commit -m "feat(python): expose PatchworkParams and patchwork class via pybi
 ### Task D3: Add Python smoke test for patchwork class
 
 **Files:**
+
 - Create: `python/tests/test_patchwork_smoke.py`
 
-- [ ] **Step 1: Write the test**
+- \[ \] **Step 1: Write the test**
 
 ```python
 # python/tests/test_patchwork_smoke.py
@@ -1070,7 +1088,7 @@ def test_classic_estimate_ground_partitions_all_points():
     assert ground.shape[0] + nonground.shape[0] <= scan.shape[0]
 ```
 
-- [ ] **Step 2: Run all python tests**
+- \[ \] **Step 2: Run all python tests**
 
 ```bash
 pip install --force-reinstall --no-deps '/Users/fudxo/git/patchwork-plusplus/python[test]'
@@ -1079,26 +1097,27 @@ pytest -rA --verbose /Users/fudxo/git/patchwork-plusplus/python/
 
 Expected: all 4 tests pass (2 patchworkpp + 2 patchwork).
 
-- [ ] **Step 3: Commit**
+- \[ \] **Step 3: Commit**
 
 ```bash
 git add python/tests/test_patchwork_smoke.py
 git commit -m "test(python): smoke test for patchwork classic against data/000000.bin"
 ```
 
----
+______________________________________________________________________
 
 ## Phase E — ROS2 wiring
 
 ### Task E1: Add algorithm dispatch to GroundSegmentationServer
 
 **Files:**
+
 - Modify: `ros/src/GroundSegmentationServer.hpp`
 - Modify: `ros/src/GroundSegmentationServer.cpp`
 
 Read `ros/src/GroundSegmentationServer.hpp` and `.cpp` first. The current code holds a `std::unique_ptr<patchwork::PatchWorkpp>`. We change it to a `std::variant`.
 
-- [ ] **Step 1: In .hpp, replace the impl member**
+- \[ \] **Step 1: In .hpp, replace the impl member**
 
 Old:
 
@@ -1119,7 +1138,7 @@ using ImplVariant = std::variant<
 ImplVariant impl_;
 ```
 
-- [ ] **Step 2: In .cpp constructor, branch on `algorithm` parameter**
+- \[ \] **Step 2: In .cpp constructor, branch on `algorithm` parameter**
 
 Add at the top of the constructor (after node init, before any param reads that go into the patchworkpp Params):
 
@@ -1144,7 +1163,7 @@ if (algorithm == "patchwork") {
 
 Extract `loadPlusplusParamsFromROS()` and `loadClassicParamsFromROS()` as private helpers.
 
-- [ ] **Step 3: Replace direct calls with std::visit**
+- \[ \] **Step 3: Replace direct calls with std::visit**
 
 Anywhere the code calls `patchwork_->estimateGround(...)` or `patchwork_->getGround()`, rewrite as:
 
@@ -1158,7 +1177,7 @@ For the getters, the variant alternatives have identical method names so `std::v
 auto ground = std::visit([](auto& impl) { return impl->getGround(); }, impl_);
 ```
 
-- [ ] **Step 4: Build the ROS package**
+- \[ \] **Step 4: Build the ROS package**
 
 ```bash
 cd /Users/fudxo/git/patchwork-plusplus
@@ -1168,7 +1187,7 @@ docker run --rm -v $(pwd):/src -w /src osrf/ros:humble-desktop \
 
 Expected: build succeeds. (If Docker is unavailable, just build via colcon on a Linux host with ROS humble.)
 
-- [ ] **Step 5: Commit**
+- \[ \] **Step 5: Commit**
 
 ```bash
 git add ros/src/GroundSegmentationServer.hpp ros/src/GroundSegmentationServer.cpp
@@ -1178,15 +1197,16 @@ git commit -m "feat(ros): dispatch on algorithm parameter (patchwork vs patchwor
 ### Task E2: Expose `algorithm` launch arg
 
 **Files:**
+
 - Modify: `ros/launch/patchworkpp.launch.py`
 
-- [ ] **Step 1: Read the launch file**
+- \[ \] **Step 1: Read the launch file**
 
 ```bash
 cat ros/launch/patchworkpp.launch.py
 ```
 
-- [ ] **Step 2: Add a DeclareLaunchArgument and pass it through**
+- \[ \] **Step 2: Add a DeclareLaunchArgument and pass it through**
 
 Add to the `LaunchDescription` items, before the `Node(...)`:
 
@@ -1206,23 +1226,24 @@ In the `Node(...)` parameters list, append:
 
 (Adjust imports: add `from launch.actions import DeclareLaunchArgument` and `from launch.substitutions import LaunchConfiguration` if not already present.)
 
-- [ ] **Step 3: Commit**
+- \[ \] **Step 3: Commit**
 
 ```bash
 git add ros/launch/patchworkpp.launch.py
 git commit -m "feat(ros): expose 'algorithm' launch argument"
 ```
 
----
+______________________________________________________________________
 
 ## Phase F — Documentation and version bump
 
 ### Task F1: Add "Choosing an algorithm" subsection to README
 
 **Files:**
+
 - Modify: `README.md`
 
-- [ ] **Step 1: Add the subsection**
+- \[ \] **Step 1: Add the subsection**
 
 Find the `## :gear: How to build & Run` section. After the existing Python/C++/ROS2 subsections, before `## :pencil: Citation`, insert:
 
@@ -1252,7 +1273,7 @@ ros2 launch patchworkpp patchworkpp.launch.py algorithm:=patchwork
 
 (Use real backticks for the code fences; the example here escapes them so the markdown plan parses cleanly.)
 
-- [ ] **Step 2: Commit**
+- \[ \] **Step 2: Commit**
 
 ```bash
 git add README.md
@@ -1262,18 +1283,20 @@ git commit -m "docs(readme): add 'Choosing an algorithm' subsection for patchwor
 ### Task F2: Bump version 1.0.4 → 1.1.0
 
 **Files:**
+
 - Modify: `python/pyproject.toml`
+
 - Modify: `cpp/CMakeLists.txt`
 
-- [ ] **Step 1: Bump in pyproject.toml**
+- \[ \] **Step 1: Bump in pyproject.toml**
 
 Change `version = "1.0.4"` to `version = "1.1.0"` (line 7 of `python/pyproject.toml`).
 
-- [ ] **Step 2: Bump in cpp/CMakeLists.txt**
+- \[ \] **Step 2: Bump in cpp/CMakeLists.txt**
 
 Change `project(patchworkpp VERSION 1.0.4)` to `project(patchworkpp VERSION 1.1.0)` (line 2).
 
-- [ ] **Step 3: Reinstall and verify version**
+- \[ \] **Step 3: Reinstall and verify version**
 
 ```bash
 pip install --force-reinstall --no-deps /Users/fudxo/git/patchwork-plusplus/python/
@@ -1282,20 +1305,20 @@ python -c "import pypatchworkpp; print(pypatchworkpp.patchwork.__init__.__doc__)
 
 (Sanity, not a hard assertion.)
 
-- [ ] **Step 4: Commit**
+- \[ \] **Step 4: Commit**
 
 ```bash
 git add python/pyproject.toml cpp/CMakeLists.txt
 git commit -m "chore: bump version to 1.1.0 (adds Patchwork classic algorithm)"
 ```
 
----
+______________________________________________________________________
 
 ## Phase G — PR
 
 ### Task G1: Push branch and create PR
 
-- [ ] **Step 1: Final local CI run**
+- \[ \] **Step 1: Final local CI run**
 
 Build cpp + run python tests once more:
 
@@ -1313,7 +1336,7 @@ pytest -rA --verbose /Users/fudxo/git/patchwork-plusplus/python/
 
 All green.
 
-- [ ] **Step 2: Push and open PR**
+- \[ \] **Step 2: Push and open PR**
 
 ```bash
 git push -u origin feat/patchwork-classic
@@ -1322,6 +1345,6 @@ gh pr create --base master --head feat/patchwork-classic \
   --body "$(cat docs/superpowers/specs/2026-05-09-add-patchwork-classic-algorithm-design.md | sed -n '/^## Background/,/^## Out of scope/p')"
 ```
 
-- [ ] **Step 3: Wait for CI, address feedback, merge**
+- \[ \] **Step 3: Wait for CI, address feedback, merge**
 
 Use `gh pr checks <PR#> --watch` or the same background-watcher pattern from PR #78.

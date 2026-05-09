@@ -138,12 +138,12 @@ The upstream `/Users/fudxo/git/patchwork` algorithm (`include/patchwork/patchwor
 Our adapter strips all of these:
 
 1. **Input conversion** — a private helper `convertToPointVec(const Eigen::MatrixXf&)` produces `std::vector<patchwork::PointXYZ>` (the existing POD struct from `cpp/patchworkpp/include/patchwork/patchworkpp.h`, reused so both algorithms share point representation).
-2. **Output conversion** — `Eigen::MatrixX3f` built from accumulated ground/nonground vectors, identical to Patchwork++'s helpers.
-3. **PCL → Eigen/std** — `pcl::PointCloud<PointXYZI>` becomes `std::vector<PointXYZ>`. `pcl::compute3DCentroid` and `pcl::getMinMax3D` become Eigen mean / min/max reductions.
-4. **TBB → sequential** — the `tbb::parallel_for` over patches (patchwork.hpp:578) is replaced with a plain `for` loop. Patchwork++'s implementation is also sequential and fast enough for typical 100k-point scans, so the perf delta is acceptable. We do not add an optional TBB toggle in this PR.
-5. **Boost.Format → std::cout** — verbose logging only.
-6. **rclcpp** — every reference is in the ROS publishing path, not the algorithm itself; it does not appear in our adapter.
-7. **ATAT** — ported as-is (sort patches by mean z, average the lowest N, set sensor_height).
+1. **Output conversion** — `Eigen::MatrixX3f` built from accumulated ground/nonground vectors, identical to Patchwork++'s helpers.
+1. **PCL → Eigen/std** — `pcl::PointCloud<PointXYZI>` becomes `std::vector<PointXYZ>`. `pcl::compute3DCentroid` and `pcl::getMinMax3D` become Eigen mean / min/max reductions.
+1. **TBB → sequential** — the `tbb::parallel_for` over patches (patchwork.hpp:578) is replaced with a plain `for` loop. Patchwork++'s implementation is also sequential and fast enough for typical 100k-point scans, so the perf delta is acceptable. We do not add an optional TBB toggle in this PR.
+1. **Boost.Format → std::cout** — verbose logging only.
+1. **rclcpp** — every reference is in the ROS publishing path, not the algorithm itself; it does not appear in our adapter.
+1. **ATAT** — ported as-is (sort patches by mean z, average the lowest N, set sensor_height).
 
 The semantics of the original algorithm (seed selection, plane fitting, GLE thresholds) stay byte-for-byte logically equivalent. We do not "improve" the upstream algorithm; we adapt only the I/O surface.
 
@@ -216,9 +216,9 @@ Add a "Choosing an algorithm" subsection under "How to build & Run":
 ## Risks and open questions
 
 1. **Code volume** — the upstream `patchwork.hpp` is roughly 1k lines including PCL plumbing. After stripping PCL/ROS we expect 600–800 lines of pure algorithm. Reviewable but not trivial.
-2. **Numerical equivalence** — we do not have a regression dataset to assert that our PCL-free port yields identical ground/nonground partitions for the same input as upstream Patchwork. We accept this: the upstream is the reference, ours is a faithful adaptation, and behavior may drift in floating-point edge cases.
-3. **Eigen vector resize semantics** — original Patchwork uses pcl point cloud `push_back`; we use `std::vector<PointXYZ>` then materialize to `Eigen::MatrixX3f` once. This shifts the cost profile slightly but keeps allocations predictable.
-4. **Build-target naming** — `ground_seg_classic` is the chosen identifier, deliberately neutral and tied to the build system, not user-facing.
+1. **Numerical equivalence** — we do not have a regression dataset to assert that our PCL-free port yields identical ground/nonground partitions for the same input as upstream Patchwork. We accept this: the upstream is the reference, ours is a faithful adaptation, and behavior may drift in floating-point edge cases.
+1. **Eigen vector resize semantics** — original Patchwork uses pcl point cloud `push_back`; we use `std::vector<PointXYZ>` then materialize to `Eigen::MatrixX3f` once. This shifts the cost profile slightly but keeps allocations predictable.
+1. **Build-target naming** — `ground_seg_classic` is the chosen identifier, deliberately neutral and tied to the build system, not user-facing.
 
 ## Out of scope (explicit)
 
@@ -233,7 +233,7 @@ Add a "Choosing an algorithm" subsection under "How to build & Run":
 The detailed plan is the next step (writing-plans skill). Expected sequence:
 
 1. Bring in `cpp/patchwork/` skeleton with placeholder algorithm; verify CMake hooks compile.
-2. Port the upstream algorithm body, removing PCL types incrementally; cross-check with the smoke test.
-3. Wire the Python binding, add the new smoke test.
-4. Wire the ROS variant dispatch and the launch parameter.
-5. README + version bump.
+1. Port the upstream algorithm body, removing PCL types incrementally; cross-check with the smoke test.
+1. Wire the Python binding, add the new smoke test.
+1. Wire the ROS variant dispatch and the launch parameter.
+1. README + version bump.

@@ -2,8 +2,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "patchwork/patchworkpp.h"
 #include "patchwork/patchwork.h"
+#include "patchwork/patchworkpp.h"
 
 namespace py = pybind11;
 
@@ -58,38 +58,38 @@ PYBIND11_MODULE(pypatchworkpp, m) {
 
   py::class_<patchwork::PatchworkParams>(m, "PatchworkParams")
       .def(py::init<>())
-      .def_readwrite("sensor_height",         &patchwork::PatchworkParams::sensor_height)
-      .def_readwrite("max_range",             &patchwork::PatchworkParams::max_range)
-      .def_readwrite("min_range",             &patchwork::PatchworkParams::min_range)
-      .def_readwrite("num_zones",             &patchwork::PatchworkParams::num_zones)
+      .def_readwrite("sensor_height", &patchwork::PatchworkParams::sensor_height)
+      .def_readwrite("max_range", &patchwork::PatchworkParams::max_range)
+      .def_readwrite("min_range", &patchwork::PatchworkParams::min_range)
+      .def_readwrite("num_zones", &patchwork::PatchworkParams::num_zones)
       .def_readwrite("num_sectors_each_zone", &patchwork::PatchworkParams::num_sectors_each_zone)
-      .def_readwrite("num_rings_each_zone",   &patchwork::PatchworkParams::num_rings_each_zone)
-      .def_readwrite("min_ranges",            &patchwork::PatchworkParams::min_ranges)
-      .def_readwrite("num_iter",              &patchwork::PatchworkParams::num_iter)
-      .def_readwrite("num_lpr",               &patchwork::PatchworkParams::num_lpr)
-      .def_readwrite("num_min_pts",           &patchwork::PatchworkParams::num_min_pts)
-      .def_readwrite("th_seeds",              &patchwork::PatchworkParams::th_seeds)
-      .def_readwrite("th_dist",               &patchwork::PatchworkParams::th_dist)
-      .def_readwrite("uprightness_thr",       &patchwork::PatchworkParams::uprightness_thr)
-      .def_readwrite("elevation_thr",         &patchwork::PatchworkParams::elevation_thr)
-      .def_readwrite("flatness_thr",          &patchwork::PatchworkParams::flatness_thr)
+      .def_readwrite("num_rings_each_zone", &patchwork::PatchworkParams::num_rings_each_zone)
+      .def_readwrite("min_ranges", &patchwork::PatchworkParams::min_ranges)
+      .def_readwrite("num_iter", &patchwork::PatchworkParams::num_iter)
+      .def_readwrite("num_lpr", &patchwork::PatchworkParams::num_lpr)
+      .def_readwrite("num_min_pts", &patchwork::PatchworkParams::num_min_pts)
+      .def_readwrite("th_seeds", &patchwork::PatchworkParams::th_seeds)
+      .def_readwrite("th_dist", &patchwork::PatchworkParams::th_dist)
+      .def_readwrite("uprightness_thr", &patchwork::PatchworkParams::uprightness_thr)
+      .def_readwrite("elevation_thr", &patchwork::PatchworkParams::elevation_thr)
+      .def_readwrite("flatness_thr", &patchwork::PatchworkParams::flatness_thr)
       .def_readwrite("adaptive_seed_selection_margin",
                      &patchwork::PatchworkParams::adaptive_seed_selection_margin)
-      .def_readwrite("using_global_thr",      &patchwork::PatchworkParams::using_global_thr)
-      .def_readwrite("global_elevation_thr",  &patchwork::PatchworkParams::global_elevation_thr)
-      .def_readwrite("ATAT_ON",               &patchwork::PatchworkParams::ATAT_ON)
-      .def_readwrite("max_h_for_ATAT",        &patchwork::PatchworkParams::max_h_for_ATAT)
-      .def_readwrite("num_sectors_for_ATAT",  &patchwork::PatchworkParams::num_sectors_for_ATAT)
-      .def_readwrite("noise_bound",           &patchwork::PatchworkParams::noise_bound)
-      .def_readwrite("verbose",               &patchwork::PatchworkParams::verbose);
+      .def_readwrite("using_global_thr", &patchwork::PatchworkParams::using_global_thr)
+      .def_readwrite("global_elevation_thr", &patchwork::PatchworkParams::global_elevation_thr)
+      .def_readwrite("ATAT_ON", &patchwork::PatchworkParams::ATAT_ON)
+      .def_readwrite("max_h_for_ATAT", &patchwork::PatchworkParams::max_h_for_ATAT)
+      .def_readwrite("num_sectors_for_ATAT", &patchwork::PatchworkParams::num_sectors_for_ATAT)
+      .def_readwrite("noise_bound", &patchwork::PatchworkParams::noise_bound)
+      .def_readwrite("verbose", &patchwork::PatchworkParams::verbose);
 
   py::class_<patchwork::PatchWork>(m, "patchwork")
       .def(py::init<patchwork::PatchworkParams>())
-      .def("estimateGround",      &patchwork::PatchWork::estimateGround)
-      .def("getGround",           &patchwork::PatchWork::getGround)
-      .def("getNonground",        &patchwork::PatchWork::getNonground)
-      .def("getGroundIndices",    &patchwork::PatchWork::getGroundIndices)
+      .def("estimateGround", &patchwork::PatchWork::estimateGround)
+      .def("getGround", &patchwork::PatchWork::getGround)
+      .def("getNonground", &patchwork::PatchWork::getNonground)
+      .def("getGroundIndices", &patchwork::PatchWork::getGroundIndices)
       .def("getNongroundIndices", &patchwork::PatchWork::getNongroundIndices)
-      .def("getTimeTaken",        &patchwork::PatchWork::getTimeTaken)
-      .def("getHeight",           &patchwork::PatchWork::getHeight);
+      .def("getTimeTaken", &patchwork::PatchWork::getTimeTaken)
+      .def("getHeight", &patchwork::PatchWork::getHeight);
 }

@@ -1,9 +1,9 @@
+#include "patchwork/patchwork.h"
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <limits>
-
-#include "patchwork/patchwork.h"
 
 namespace {
 inline Eigen::MatrixX3f to_matrix(const std::vector<patchwork::PointXYZ>& pts) {
@@ -26,9 +26,7 @@ double PatchWork::xy2theta(double x, double y) const {
   return (a >= 0) ? a : (a + 2 * M_PI);
 }
 
-double PatchWork::xy2radius(double x, double y) const {
-  return std::hypot(x, y);
-}
+double PatchWork::xy2radius(double x, double y) const { return std::hypot(x, y); }
 
 void PatchWork::initialize() {
   regionwise_patches_.clear();
@@ -44,38 +42,39 @@ void PatchWork::initialize() {
 void PatchWork::flush() {
   for (auto& zone : regionwise_patches_)
     for (auto& ring : zone)
-      for (auto& sector : ring)
-        sector.clear();
+      for (auto& sector : ring) sector.clear();
 }
 
 void PatchWork::pc2regionwise_patches(const std::vector<PointXYZ>& src) {
   for (int idx = 0; idx < static_cast<int>(src.size()); ++idx) {
     const auto& p = src[idx];
-    double r     = xy2radius(p.x, p.y);
-    double theta = xy2theta(p.x, p.y);
+    double r      = xy2radius(p.x, p.y);
+    double theta  = xy2theta(p.x, p.y);
 
     if (r < params_.min_range || r > params_.max_range) continue;
 
     // Determine zone by min_ranges (last index whose min_range <= r)
     int zone = 0;
     for (int z = params_.num_zones - 1; z >= 0; --z) {
-      if (r >= params_.min_ranges[z]) { zone = z; break; }
+      if (r >= params_.min_ranges[z]) {
+        zone = z;
+        break;
+      }
     }
     if (zone < 0 || zone >= params_.num_zones) continue;
 
     // Within zone, ring index proportional to (r - min_ranges[z]) / ring_width
-    double ring_width = (zone + 1 < params_.num_zones)
-                        ? (params_.min_ranges[zone + 1] - params_.min_ranges[zone])
-                              / params_.num_rings_each_zone[zone]
-                        : (params_.max_range - params_.min_ranges[zone])
-                              / params_.num_rings_each_zone[zone];
-    int ring = std::min<int>(
-        static_cast<int>((r - params_.min_ranges[zone]) / ring_width),
-        params_.num_rings_each_zone[zone] - 1);
+    double ring_width =
+        (zone + 1 < params_.num_zones)
+            ? (params_.min_ranges[zone + 1] - params_.min_ranges[zone]) /
+                  params_.num_rings_each_zone[zone]
+            : (params_.max_range - params_.min_ranges[zone]) / params_.num_rings_each_zone[zone];
+    int ring = std::min<int>(static_cast<int>((r - params_.min_ranges[zone]) / ring_width),
+                             params_.num_rings_each_zone[zone] - 1);
 
-    int sector = std::min<int>(
-        static_cast<int>(theta / (2 * M_PI / params_.num_sectors_each_zone[zone])),
-        params_.num_sectors_each_zone[zone] - 1);
+    int sector =
+        std::min<int>(static_cast<int>(theta / (2 * M_PI / params_.num_sectors_each_zone[zone])),
+                      params_.num_sectors_each_zone[zone] - 1);
 
     regionwise_patches_[zone][ring][sector].push_back(p);
   }
@@ -90,25 +89,25 @@ void PatchWork::estimate_plane(const std::vector<PointXYZ>& seeds, PCAFeature& o
     pts(i, 1) = seeds[i].y;
     pts(i, 2) = seeds[i].z;
   }
-  Eigen::Vector3f mean = pts.colwise().mean();
+  Eigen::Vector3f mean     = pts.colwise().mean();
   Eigen::MatrixXf centered = pts.rowwise() - mean.transpose();
-  Eigen::Matrix3f cov = (centered.adjoint() * centered) /
-                        std::max<float>(1.0f, static_cast<float>(pts.rows() - 1));
+  Eigen::Matrix3f cov =
+      (centered.adjoint() * centered) / std::max<float>(1.0f, static_cast<float>(pts.rows() - 1));
 
   Eigen::JacobiSVD<Eigen::Matrix3f> svd(cov, Eigen::ComputeFullU);
   out.normal_ = svd.matrixU().col(2);
   if (out.normal_(2) < 0) out.normal_ = -out.normal_;
   out.singular_values_ = svd.singularValues();
-  out.mean_  = mean;
-  out.d_     = -out.normal_.dot(mean);
-  out.th_dist_d_ = static_cast<float>(params_.th_dist) - out.d_;
+  out.mean_            = mean;
+  out.d_               = -out.normal_.dot(mean);
+  out.th_dist_d_       = static_cast<float>(params_.th_dist) - out.d_;
 
-  const float s0 = out.singular_values_(0);
-  const float s1 = out.singular_values_(1);
-  const float s2 = out.singular_values_(2);
+  const float s0  = out.singular_values_(0);
+  const float s1  = out.singular_values_(1);
+  const float s2  = out.singular_values_(2);
   const float eps = 1e-12f;
-  out.linearity_ = (s0 - s1) / std::max(s0, eps);
-  out.planarity_ = (s1 - s2) / std::max(s0, eps);
+  out.linearity_  = (s0 - s1) / std::max(s0, eps);
+  out.planarity_  = (s1 - s2) / std::max(s0, eps);
 }
 
 void PatchWork::extract_initial_seeds(int zone_idx,
@@ -131,7 +130,7 @@ void PatchWork::extract_initial_seeds(int zone_idx,
   }
 
   double sum = 0.0;
-  int    cnt = 0;
+  int cnt    = 0;
   for (int i = init_idx; i < static_cast<int>(sorted.size()) && cnt < params_.num_lpr; ++i) {
     sum += sorted[i].z;
     ++cnt;
@@ -143,7 +142,8 @@ void PatchWork::extract_initial_seeds(int zone_idx,
   }
 }
 
-PatchStatus PatchWork::determine_gle_status(int zone_idx, int ring_idx,
+PatchStatus PatchWork::determine_gle_status(int zone_idx,
+                                            int ring_idx,
                                             const PCAFeature& feature) const {
   // Uprightness check
   if (std::abs(feature.normal_(2)) < params_.uprightness_thr) {
@@ -171,7 +171,8 @@ PatchStatus PatchWork::determine_gle_status(int zone_idx, int ring_idx,
   return PatchStatus::UprightEnough;
 }
 
-void PatchWork::perform_regionwise_segmentation(int zone_idx, int ring_idx,
+void PatchWork::perform_regionwise_segmentation(int zone_idx,
+                                                int ring_idx,
                                                 const std::vector<PointXYZ>& patch,
                                                 std::vector<PointXYZ>& patch_ground,
                                                 std::vector<PointXYZ>& patch_nonground,
@@ -181,14 +182,14 @@ void PatchWork::perform_regionwise_segmentation(int zone_idx, int ring_idx,
 
   if (static_cast<int>(patch.size()) < params_.num_min_pts) {
     patch_nonground = patch;
-    status_out = PatchStatus::FewPoints;
+    status_out      = PatchStatus::FewPoints;
     return;
   }
 
   // Sort ascending by z
   std::vector<PointXYZ> sorted = patch;
-  std::sort(sorted.begin(), sorted.end(),
-            [](const PointXYZ& a, const PointXYZ& b) { return a.z < b.z; });
+  std::sort(
+      sorted.begin(), sorted.end(), [](const PointXYZ& a, const PointXYZ& b) { return a.z < b.z; });
 
   // Extract initial seeds (LPR)
   std::vector<PointXYZ> ground;
@@ -226,10 +227,15 @@ void PatchWork::perform_regionwise_segmentation(int zone_idx, int ring_idx,
     for (const auto& p : sorted) {
       bool in_seeds = false;
       for (const auto& s : seeds) {
-        if (s.x == p.x && s.y == p.y && s.z == p.z) { in_seeds = true; break; }
+        if (s.x == p.x && s.y == p.y && s.z == p.z) {
+          in_seeds = true;
+          break;
+        }
       }
-      if (in_seeds) patch_ground.push_back(p);
-      else          patch_nonground.push_back(p);
+      if (in_seeds)
+        patch_ground.push_back(p);
+      else
+        patch_nonground.push_back(p);
     }
     // Estimate plane on seeds so feature is valid for determine_gle_status.
     if (!patch_ground.empty()) estimate_plane(patch_ground, feature);
@@ -279,18 +285,16 @@ void PatchWork::estimate_sensor_height(std::vector<PointXYZ>& cloud) {
   if (cloud.empty()) return;
 
   const int num_sectors = std::max(1, params_.num_sectors_for_ATAT);
-  std::vector<double> sector_min_z(num_sectors,
-                                   std::numeric_limits<double>::infinity());
+  std::vector<double> sector_min_z(num_sectors, std::numeric_limits<double>::infinity());
 
   // Bucket points into angular sectors; track the lowest-z per sector.
   // Restrict to a near-field radius window (<=5 m) where ground is reliable.
   for (const auto& p : cloud) {
     const double r = xy2radius(p.x, p.y);
     if (r > 5.0) continue;
-    const double theta  = xy2theta(p.x, p.y);
-    const int    sector = std::min<int>(
-        static_cast<int>(theta / (2 * M_PI / num_sectors)),
-        num_sectors - 1);
+    const double theta = xy2theta(p.x, p.y);
+    const int sector =
+        std::min<int>(static_cast<int>(theta / (2 * M_PI / num_sectors)), num_sectors - 1);
     if (p.z < sector_min_z[sector]) sector_min_z[sector] = p.z;
   }
 
@@ -310,16 +314,14 @@ void PatchWork::estimate_sensor_height(std::vector<PointXYZ>& cloud) {
 
   if (candidates.empty()) {
     if (params_.verbose) {
-      std::cout << "[ATAT] no candidates; keeping sensor_height = "
-                << sensor_height_ << std::endl;
+      std::cout << "[ATAT] no candidates; keeping sensor_height = " << sensor_height_ << std::endl;
     }
     return;
   }
 
   const double new_height = consensus_set_based_height_estimation(candidates);
   if (params_.verbose) {
-    std::cout << "[ATAT] sensor_height: " << sensor_height_
-              << " -> " << new_height << std::endl;
+    std::cout << "[ATAT] sensor_height: " << sensor_height_ << " -> " << new_height << std::endl;
   }
   sensor_height_ = new_height;
 }
@@ -334,7 +336,7 @@ void PatchWork::materialize() const {
   nonground_mat_ = to_matrix(nonground_pts_);
   ground_idx_.clear();
   nonground_idx_.clear();
-  for (const auto& p : ground_pts_)    ground_idx_.push_back(p.idx);
+  for (const auto& p : ground_pts_) ground_idx_.push_back(p.idx);
   for (const auto& p : nonground_pts_) nonground_idx_.push_back(p.idx);
   outputs_dirty_ = false;
 }
@@ -343,19 +345,31 @@ void PatchWork::materialize() const {
 // Public getters
 // ---------------------------------------------------------------------------
 
-Eigen::MatrixX3f PatchWork::getGround()           const { materialize(); return ground_mat_; }
-Eigen::MatrixX3f PatchWork::getNonground()        const { materialize(); return nonground_mat_; }
-std::vector<int> PatchWork::getGroundIndices()    const { materialize(); return ground_idx_; }
-std::vector<int> PatchWork::getNongroundIndices() const { materialize(); return nonground_idx_; }
-double           PatchWork::getTimeTaken()        const { return time_taken_; }
-double           PatchWork::getHeight()           const { return sensor_height_; }
+Eigen::MatrixX3f PatchWork::getGround() const {
+  materialize();
+  return ground_mat_;
+}
+Eigen::MatrixX3f PatchWork::getNonground() const {
+  materialize();
+  return nonground_mat_;
+}
+std::vector<int> PatchWork::getGroundIndices() const {
+  materialize();
+  return ground_idx_;
+}
+std::vector<int> PatchWork::getNongroundIndices() const {
+  materialize();
+  return nonground_idx_;
+}
+double PatchWork::getTimeTaken() const { return time_taken_; }
+double PatchWork::getHeight() const { return sensor_height_; }
 
 // ---------------------------------------------------------------------------
 // estimateGround — main public entry point
 // ---------------------------------------------------------------------------
 
 void PatchWork::estimateGround(const Eigen::MatrixXf& cloud) {
-  using clock = std::chrono::high_resolution_clock;
+  using clock  = std::chrono::high_resolution_clock;
   auto t_start = clock::now();
 
   // Initialize CZM on first call
@@ -409,7 +423,7 @@ void PatchWork::estimateGround(const Eigen::MatrixXf& cloud) {
   // 6) Mark outputs dirty (actual matrix materialization is lazy)
   outputs_dirty_ = true;
 
-  auto t_end = clock::now();
+  auto t_end  = clock::now();
   time_taken_ = std::chrono::duration<double, std::micro>(t_end - t_start).count();
 }
 

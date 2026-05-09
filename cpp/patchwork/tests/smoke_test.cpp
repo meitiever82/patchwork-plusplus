@@ -1,6 +1,7 @@
-#include <Eigen/Dense>
 #include <cassert>
 #include <iostream>
+
+#include <Eigen/Dense>
 
 #include "patchwork/patchwork.h"
 

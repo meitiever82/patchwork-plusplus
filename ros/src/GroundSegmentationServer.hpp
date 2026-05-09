@@ -1,10 +1,10 @@
 // Patchwork++ and Patchwork classic
-#include "patchwork/patchworkpp.h"
 #include "patchwork/patchwork.h"
+#include "patchwork/patchworkpp.h"
 
 // Standard library
-#include <variant>
 #include <string>
+#include <variant>
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -28,7 +28,7 @@ class GroundSegmentationServer : public rclcpp::Node {
                      const std_msgs::msg::Header header_msg);
 
   /// Parameter loaders — only the selected algorithm's loader is called
-  patchwork::Params         loadPlusplusParamsFromROS();
+  patchwork::Params loadPlusplusParamsFromROS();
   patchwork::PatchworkParams loadClassicParamsFromROS();
 
  private:
@@ -41,9 +41,8 @@ class GroundSegmentationServer : public rclcpp::Node {
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr nonground_publisher_;
 
   /// Algorithm implementation (patchworkpp or patchwork classic)
-  using ImplVariant = std::variant<
-      std::unique_ptr<patchwork::PatchWorkpp>,
-      std::unique_ptr<patchwork::PatchWork>>;
+  using ImplVariant =
+      std::variant<std::unique_ptr<patchwork::PatchWorkpp>, std::unique_ptr<patchwork::PatchWork>>;
   ImplVariant impl_;
 
   std::string base_frame_{"base_link"};

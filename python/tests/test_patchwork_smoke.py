@@ -4,7 +4,6 @@ import os
 import numpy as np
 import pypatchworkpp
 
-
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 
 
