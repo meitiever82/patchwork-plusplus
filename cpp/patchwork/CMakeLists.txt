@@ -22,3 +22,9 @@ install(TARGETS ${CLASSIC_TARGET}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+option(BUILD_PATCHWORK_TESTS "Build C++ smoke test for PatchWork" OFF)
+if (BUILD_PATCHWORK_TESTS)
+  add_executable(patchwork_smoke tests/smoke_test.cpp)
+  target_link_libraries(patchwork_smoke PRIVATE ${CLASSIC_TARGET})
+endif()
