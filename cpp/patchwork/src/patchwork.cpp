@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <limits>
 
 #include "patchwork/patchwork.h"
 
@@ -238,17 +239,89 @@ void PatchWork::perform_regionwise_segmentation(int zone_idx, int ring_idx,
 }
 
 // ---------------------------------------------------------------------------
-// ATAT stubs — bodies filled in C9
+// ATAT — All-Terrain Automatic sensor-height estimator (C9)
 // ---------------------------------------------------------------------------
 
 double PatchWork::consensus_set_based_height_estimation(
-    const std::vector<double>& /*candidate_heights*/) {
-  // Filled in C9.
-  return sensor_height_;
+    const std::vector<double>& candidate_heights) {
+  if (candidate_heights.empty()) return sensor_height_;
+
+  // For each candidate, count how many other candidates lie within noise_bound;
+  // pick the cluster with the highest count and average those.
+  size_t best_idx   = 0;
+  size_t best_count = 0;
+  for (size_t i = 0; i < candidate_heights.size(); ++i) {
+    size_t count = 0;
+    for (size_t j = 0; j < candidate_heights.size(); ++j) {
+      if (std::abs(candidate_heights[i] - candidate_heights[j]) < params_.noise_bound) {
+        ++count;
+      }
+    }
+    if (count > best_count) {
+      best_count = count;
+      best_idx   = i;
+    }
+  }
+
+  // Average the cluster around best_idx
+  double sum = 0.0;
+  size_t cnt = 0;
+  for (double h : candidate_heights) {
+    if (std::abs(h - candidate_heights[best_idx]) < params_.noise_bound) {
+      sum += h;
+      ++cnt;
+    }
+  }
+  return (cnt != 0) ? (sum / cnt) : sensor_height_;
 }
 
-void PatchWork::estimate_sensor_height(std::vector<PointXYZ>& /*cloud*/) {
-  // Filled in C9.
+void PatchWork::estimate_sensor_height(std::vector<PointXYZ>& cloud) {
+  if (cloud.empty()) return;
+
+  const int num_sectors = std::max(1, params_.num_sectors_for_ATAT);
+  std::vector<double> sector_min_z(num_sectors,
+                                   std::numeric_limits<double>::infinity());
+
+  // Bucket points into angular sectors; track the lowest-z per sector.
+  // Restrict to a near-field radius window (<=5 m) where ground is reliable.
+  for (const auto& p : cloud) {
+    const double r = xy2radius(p.x, p.y);
+    if (r > 5.0) continue;
+    const double theta  = xy2theta(p.x, p.y);
+    const int    sector = std::min<int>(
+        static_cast<int>(theta / (2 * M_PI / num_sectors)),
+        num_sectors - 1);
+    if (p.z < sector_min_z[sector]) sector_min_z[sector] = p.z;
+  }
+
+  // Candidate sensor heights = negation of lowest-z per sector,
+  // filtered to within max_h_for_ATAT of the current sensor_height_.
+  std::vector<double> candidates;
+  candidates.reserve(num_sectors);
+  for (double z : sector_min_z) {
+    if (std::isfinite(z)) {
+      const double h = -z;  // estimated sensor height from this sector
+      if (h < sensor_height_ + params_.max_h_for_ATAT &&
+          h > sensor_height_ - params_.max_h_for_ATAT) {
+        candidates.push_back(h);
+      }
+    }
+  }
+
+  if (candidates.empty()) {
+    if (params_.verbose) {
+      std::cout << "[ATAT] no candidates; keeping sensor_height = "
+                << sensor_height_ << std::endl;
+    }
+    return;
+  }
+
+  const double new_height = consensus_set_based_height_estimation(candidates);
+  if (params_.verbose) {
+    std::cout << "[ATAT] sensor_height: " << sensor_height_
+              << " -> " << new_height << std::endl;
+  }
+  sensor_height_ = new_height;
 }
 
 // ---------------------------------------------------------------------------
