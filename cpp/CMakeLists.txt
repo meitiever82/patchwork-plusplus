@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(patchworkpp VERSION 1.0.4)
+project(patchworkpp VERSION 1.1.0)
 
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" OFF)
 option(INCLUDE_CPP_EXAMPLES "Include C++ example codes, which require Open3D for visualization" OFF)
@@ -46,6 +46,7 @@ set(PARENT_PROJECT_NAME ${PROJECT_NAME})
 set(TARGET_NAME ground_seg_cores)
 
 add_subdirectory(patchworkpp)
+add_subdirectory(patchwork)
 
 if (INCLUDE_CPP_EXAMPLES)
   if(CMAKE_VERSION VERSION_LESS "3.15")

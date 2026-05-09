@@ -35,7 +35,9 @@ endif()
 
 pybind11_add_module(pypatchworkpp patchworkpp/pybinding.cpp)
 
-target_link_libraries(pypatchworkpp PUBLIC ${PARENT_PROJECT_NAME}::${TARGET_NAME})
+target_link_libraries(pypatchworkpp PUBLIC
+    ${PARENT_PROJECT_NAME}::${TARGET_NAME}
+    ${PARENT_PROJECT_NAME}::ground_seg_classic)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   target_compile_options(pypatchworkpp PUBLIC -fsized-deallocation)

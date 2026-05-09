@@ -107,6 +107,28 @@ source ./install/setup.bash
 
 How to launch ROS2 nodes is explained [here][rosexamplelink].
 
+## :compass: Choosing an algorithm
+
+This repository ships two ground segmentation algorithms with the same input/output API. Pick the one that fits your data:
+
+- **Patchwork++** (default): adaptive elevation/flatness thresholds, RNR (intensity-based reflected noise removal), RVPF (vertical structure suppression), and TGR (probability-based ground revert). Best when the LiDAR has reflection artefacts or you want self-tuning thresholds.
+- **Patchwork** (classic, since 1.1.0): fixed elevation/flatness thresholds with explicit `z < -sensor_height - 2.0m` cutoff and few-points reject, plus optional ATAT for unknown sensor heights. Often more aggressive on ground-plane noise in heavily cluttered scenes.
+
+**Python:**
+
+```python
+import pypatchworkpp as p
+
+pp_default = p.patchworkpp(p.Parameters())          # Patchwork++
+pp_classic = p.patchwork(p.PatchworkParams())       # Patchwork (classic)
+```
+
+**ROS2:**
+
+```bash
+ros2 launch patchworkpp patchworkpp.launch.py algorithm:=patchwork
+```
+
 ## :pencil: Citation
 
 If you use our codes, please cite our paper ([arXiv][arxivlink], [IEEE *Xplore*][patchworkppieeelink])
