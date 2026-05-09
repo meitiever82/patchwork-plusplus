@@ -157,6 +157,73 @@ PatchStatus PatchWork::determine_gle_status(int zone_idx, int ring_idx,
   return PatchStatus::UprightEnough;
 }
 
+void PatchWork::perform_regionwise_segmentation(int zone_idx, int ring_idx,
+                                                const std::vector<PointXYZ>& patch,
+                                                std::vector<PointXYZ>& patch_ground,
+                                                std::vector<PointXYZ>& patch_nonground,
+                                                PatchStatus& status_out) {
+  patch_ground.clear();
+  patch_nonground.clear();
+
+  if (static_cast<int>(patch.size()) < params_.num_min_pts) {
+    patch_nonground = patch;
+    status_out = PatchStatus::FewPoints;
+    return;
+  }
+
+  // Sort ascending by z
+  std::vector<PointXYZ> sorted = patch;
+  std::sort(sorted.begin(), sorted.end(),
+            [](const PointXYZ& a, const PointXYZ& b) { return a.z < b.z; });
+
+  // Extract initial seeds (LPR)
+  std::vector<PointXYZ> ground;
+  extract_initial_seeds(zone_idx, sorted, ground);
+
+  PCAFeature feature{};
+  for (int it = 0; it < params_.num_iter; ++it) {
+    if (ground.empty()) break;
+    estimate_plane(ground, feature);
+
+    ground.clear();
+    std::vector<PointXYZ> nonground;
+    for (const auto& p : sorted) {
+      Eigen::Vector3f v(p.x, p.y, p.z);
+      const float distance = feature.normal_.dot(v - feature.mean_);
+      if (distance < feature.th_dist_d_) {
+        ground.push_back(p);
+      } else {
+        nonground.push_back(p);
+      }
+    }
+    if (it == params_.num_iter - 1) {
+      patch_ground    = std::move(ground);
+      patch_nonground = std::move(nonground);
+    }
+    // For non-final iterations: ground becomes seeds for the next plane fit.
+  }
+
+  // Fall-back: num_iter == 0 or the loop body was never entered (ground was empty
+  // on the first iteration).  Mirror upstream defensive coding.
+  if (patch_ground.empty() && patch_nonground.empty()) {
+    // Re-extract seeds since ground may have been emptied inside the loop.
+    std::vector<PointXYZ> seeds;
+    extract_initial_seeds(zone_idx, sorted, seeds);
+    for (const auto& p : sorted) {
+      bool in_seeds = false;
+      for (const auto& s : seeds) {
+        if (s.x == p.x && s.y == p.y && s.z == p.z) { in_seeds = true; break; }
+      }
+      if (in_seeds) patch_ground.push_back(p);
+      else          patch_nonground.push_back(p);
+    }
+    // Estimate plane on seeds so feature is valid for determine_gle_status.
+    if (!patch_ground.empty()) estimate_plane(patch_ground, feature);
+  }
+
+  status_out = determine_gle_status(zone_idx, ring_idx, feature);
+}
+
 void PatchWork::estimateGround(const Eigen::MatrixXf& /*cloud*/) {}
 
 Eigen::MatrixX3f PatchWork::getGround() const { return ground_mat_; }
