@@ -97,6 +97,38 @@ void PatchWork::estimate_plane(const std::vector<PointXYZ>& seeds, PCAFeature& o
   out.planarity_ = (s1 - s2) / std::max(s0, eps);
 }
 
+void PatchWork::extract_initial_seeds(int zone_idx,
+                                      const std::vector<PointXYZ>& sorted,
+                                      std::vector<PointXYZ>& seeds) {
+  seeds.clear();
+  if (sorted.empty()) return;
+
+  // Patchwork uses adaptive_seed_selection_margin in the first zone (innermost)
+  // to skip points that are likely from the sensor body / car roof.
+  int init_idx = 0;
+  if (zone_idx == 0) {
+    for (int i = 0; i < static_cast<int>(sorted.size()); ++i) {
+      if (sorted[i].z < params_.adaptive_seed_selection_margin * params_.sensor_height) {
+        ++init_idx;
+      } else {
+        break;
+      }
+    }
+  }
+
+  double sum = 0.0;
+  int    cnt = 0;
+  for (int i = init_idx; i < static_cast<int>(sorted.size()) && cnt < params_.num_lpr; ++i) {
+    sum += sorted[i].z;
+    ++cnt;
+  }
+  double lpr_height = (cnt != 0) ? (sum / cnt) : 0.0;
+
+  for (const auto& p : sorted) {
+    if (p.z < lpr_height + params_.th_seeds) seeds.push_back(p);
+  }
+}
+
 void PatchWork::estimateGround(const Eigen::MatrixXf& /*cloud*/) {}
 
 Eigen::MatrixX3f PatchWork::getGround() const { return ground_mat_; }
