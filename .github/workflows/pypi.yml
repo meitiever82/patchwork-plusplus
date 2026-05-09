@@ -48,6 +48,10 @@ jobs:
       - name: Build all wheels
         if: github.event_name == 'release'
         uses: pypa/cibuildwheel@v2.21.3
+        env:
+          # PyPy lacks the C API symbols pybind11 needs (PyModule_GetFilenameObject etc.).
+          # Restrict to CPython only — PyPy native-extension support is not a goal here.
+          CIBW_SKIP: "pp*"
         with:
           package-dir: ${{github.workspace}}/python/
 
