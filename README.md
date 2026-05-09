@@ -135,7 +135,7 @@ In addition, you can also check the paper of our baseline, Patchwork. ([arXiv][p
 ## :triangular_flag_on_post: Tested Environment
 
 - Ubuntu ~~18.04 and~~ 20.04, 22.04, and 24.04
-- macOS 13 (Intel) and macOS 14+ (Apple Silicon)
+- macOS 14+ (Apple Silicon)
 - CMake 3.25.1 (>=3.20, min. Required to install Open3D)
   - In `scripts/install_open3d.bash`, the installation of the higher version of CMake is already implemented.
 - Open3D ~~0.15.2~~ 0.18.0
