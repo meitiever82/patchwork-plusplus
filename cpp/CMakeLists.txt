@@ -46,6 +46,7 @@ set(PARENT_PROJECT_NAME ${PROJECT_NAME})
 set(TARGET_NAME ground_seg_cores)
 
 add_subdirectory(patchworkpp)
+add_subdirectory(patchwork)
 
 if (INCLUDE_CPP_EXAMPLES)
   if(CMAKE_VERSION VERSION_LESS "3.15")
