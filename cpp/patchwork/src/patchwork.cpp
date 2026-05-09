@@ -67,6 +67,36 @@ void PatchWork::pc2regionwise_patches(const std::vector<PointXYZ>& src) {
   }
 }
 
+void PatchWork::estimate_plane(const std::vector<PointXYZ>& seeds, PCAFeature& out) {
+  if (seeds.empty()) return;
+
+  Eigen::MatrixXf pts(seeds.size(), 3);
+  for (size_t i = 0; i < seeds.size(); ++i) {
+    pts(i, 0) = seeds[i].x;
+    pts(i, 1) = seeds[i].y;
+    pts(i, 2) = seeds[i].z;
+  }
+  Eigen::Vector3f mean = pts.colwise().mean();
+  Eigen::MatrixXf centered = pts.rowwise() - mean.transpose();
+  Eigen::Matrix3f cov = (centered.adjoint() * centered) /
+                        std::max<float>(1.0f, static_cast<float>(pts.rows() - 1));
+
+  Eigen::JacobiSVD<Eigen::Matrix3f> svd(cov, Eigen::ComputeFullU);
+  out.normal_ = svd.matrixU().col(2);
+  if (out.normal_(2) < 0) out.normal_ = -out.normal_;
+  out.singular_values_ = svd.singularValues();
+  out.mean_  = mean;
+  out.d_     = -out.normal_.dot(mean);
+  out.th_dist_d_ = static_cast<float>(params_.th_dist) - out.d_;
+
+  const float s0 = out.singular_values_(0);
+  const float s1 = out.singular_values_(1);
+  const float s2 = out.singular_values_(2);
+  const float eps = 1e-12f;
+  out.linearity_ = (s0 - s1) / std::max(s0, eps);
+  out.planarity_ = (s1 - s2) / std::max(s0, eps);
+}
+
 void PatchWork::estimateGround(const Eigen::MatrixXf& /*cloud*/) {}
 
 Eigen::MatrixX3f PatchWork::getGround() const { return ground_mat_; }
