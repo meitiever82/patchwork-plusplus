@@ -3,8 +3,13 @@
     <a href="https://github.com/url-kaist/patchwork-plusplus/tree/master/patchworkpp"><img src="https://img.shields.io/badge/-C++-blue?logo=cplusplus" /></a>
     <a href="https://github.com/url-kaist/patchwork-plusplus/tree/master"><img src="https://img.shields.io/badge/Python-3670A0?logo=python&logoColor=ffdd54" /></a>
     <a href="https://github.com/url-kaist/patchwork-plusplus/tree/master/ros"><img src="https://img.shields.io/badge/ROS2-Humble-blue" /></a>
-    <a href="https://github.com/url-kaist/patchwork-plusplus/tree/master"><img src="https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black" /></a>
-    <a href="https://ieeexplore.ieee.org/document/9981561"><img src="https://img.shields.io/badge/DOI-10.1109/IROS47612.2022.9981561-004088.svg"/>
+    <a href="https://github.com/url-kaist/patchwork-plusplus/tree/master"><img src="https://img.shields.io/badge/Ubuntu-E95420?logo=ubuntu&logoColor=white" /></a>
+    <a href="https://github.com/url-kaist/patchwork-plusplus/tree/master"><img src="https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white" /></a>
+    <a href="https://arxiv.org/abs/2207.11919"><img src="https://img.shields.io/badge/arXiv-b33737?logo=arXiv" /></a>
+    <a href="https://ieeexplore.ieee.org/document/9981561"><img src="https://img.shields.io/badge/DOI-10.1109/IROS47612.2022.9981561-004088.svg"/></a>
+    <br />
+    <a href="https://github.com/url-kaist/patchwork-plusplus/actions/workflows/cpp.yml"><img src="https://github.com/url-kaist/patchwork-plusplus/actions/workflows/cpp.yml/badge.svg?branch=master" alt="C++ API" /></a>
+    <a href="https://github.com/url-kaist/patchwork-plusplus/actions/workflows/python.yml"><img src="https://github.com/url-kaist/patchwork-plusplus/actions/workflows/python.yml/badge.svg?branch=master" alt="Python API" /></a>
     <br />
     <br />
     <a href=https://www.youtube.com/watch?v=fogCM159GRk>Video</a>
