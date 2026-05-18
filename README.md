@@ -26,6 +26,12 @@
   <br />
   <p align="center"><img src=pictures/patchwork++.gif alt="animated" /></p>
 
+<p align="center">
+    <strong>(May 19, 2026)</strong> pip installation is now live:
+    <br/>
+    <a href="https://pypi.org/project/pypatchworkpp/"><img src="https://readme-typing-svg.demolab.com?background=0D1117&color=22C55E&font=Fira+Code&size=18&duration=2500&pause=800&center=true&vCenter=true&width=320&height=30&lines=%24+pip+install+pypatchworkpp" alt="pip install pypatchworkpp"/></a>
+</p>
+
 [Patchwork++][arxivlink], an extension of [Patchwork][patchworklink], is **a fast, robust, and self-adaptive ground segmentation algorithm** on 3D point cloud.
 
 </div>
