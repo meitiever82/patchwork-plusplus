@@ -41,6 +41,7 @@
 - C++ source code of Patchwork++ ([patchworkpp][sourcecodelink])
 - Python binding of Patchwork++ using pybind11 ([python_wrapper][wraplink])
 - Examples codes of [C++][cppexamplelink], [Python][pyexamplelink], and [ROS2][rosexamplelink] :thumbsup:
+- Full suppor of a reproducible **SemanticKITTI evaluation harness** for both Patchwork and Patchwork++ ([`python/examples/evaluate_semantickitti.py`][evallink]). In the papers of Patchwork and Patchwork++, we use **different evaluation protocols** — see [`USAGE.md`][usagelink] §1 for why and §4 for per-sequence numbers.
 
 > If you are familiar with ROS1, you can also visit [here][roslink] and try executing ROS1-based Patchwork++!
 
@@ -68,23 +69,23 @@ Eigen is fetched automatically by CMake, so no extra system package is required 
 
 ### Python
 
-**Pure installation**
+The released library is on PyPI:
 
 ```commandline
-make pyinstall
+pip install pypatchworkpp                # core library
+pip install 'pypatchworkpp[demo]'        # + Open3D for the visual demos
 ```
 
-Then, you can use Patchwork++ by `import pypatchworkpp`, which is super simple!
+Then `import pypatchworkpp` in your script — see the [Python examples][pyexamplelink].
 
-**Installation to run demo**
-
-Only Open3D (> 0.17.0) is additionally installed for visualization purposes.
+<details><summary>Build from source (contributors / unreleased main)</summary>
 
 ```commandline
-make pyinstall_with_demo
+make pyinstall                # equivalent to `pip install ./python/`
+make pyinstall_with_demo      # also installs Open3D >= 0.17.0
 ```
 
-How to run Python demos is explained [here][pyexamplelink].
+</details>
 
 ### C++
 
@@ -135,9 +136,13 @@ pp_default = p.patchworkpp(p.Parameters())          # Patchwork++
 pp_classic = p.patchwork(p.PatchworkParams())       # Patchwork (classic)
 ```
 
-**ROS2:**
+**ROS2:** Patchwork++ is the default; pass `algorithm:=patchwork` to switch to the classic Patchwork.
 
 ```bash
+# Default — runs Patchwork++
+ros2 launch patchworkpp patchworkpp.launch.py
+
+# Override to the classic Patchwork
 ros2 launch patchworkpp patchworkpp.launch.py algorithm:=patchwork
 ```
 
@@ -193,6 +198,7 @@ ______________________________________________________________________
 
 [arxivlink]: https://arxiv.org/abs/2207.11919
 [cppexamplelink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/cpp
+[evallink]: python/examples/evaluate_semantickitti.py
 [htlink]: https://github.com/LimHyungTae
 [patchworkarxivlink]: https://arxiv.org/abs/2108.05560
 [patchworkieeelink]: https://ieeexplore.ieee.org/document/9466396
@@ -203,4 +209,5 @@ ______________________________________________________________________
 [roslink]: https://github.com/url-kaist/patchwork-plusplus-ros
 [sjlink]: https://github.com/seungjae24
 [sourcecodelink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/cpp/patchworkpp
+[usagelink]: USAGE.md
 [wraplink]: https://github.com/url-kaist/patchwork-plusplus/tree/master/python/patchworkpp
