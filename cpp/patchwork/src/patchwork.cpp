@@ -150,11 +150,19 @@ PatchStatus PatchWork::determine_gle_status(int zone_idx,
     return PatchStatus::TooTilted;
   }
 
-  // The first elevation_thr.size() tiers get tier-specific elevation/flatness thresholds.
-  const int tier = (zone_idx == 0) ? ring_idx : zone_idx;
+  // Use the GLOBAL ring index across all zones for tier lookup so that
+  // each of the first elevation_thr.size() rings gets its own threshold,
+  // matching the original Patchwork.
+  int tier = ring_idx;
+  for (int z = 0; z < zone_idx; ++z) tier += params_.num_rings_each_zone[z];
+
   if (tier < static_cast<int>(params_.elevation_thr.size())) {
     const double mean_z = feature.mean_(2);
-    if (mean_z > params_.elevation_thr[tier]) {
+    // elevation_thr is GROUND-frame (see config/velodyne64.yaml in the
+    // original Patchwork repo); convert to the sensor frame by
+    // subtracting sensor_height.
+    const double elev_cut = -params_.sensor_height + params_.elevation_thr[tier];
+    if (mean_z > elev_cut) {
       // Recoverable if the patch is very flat
       if (feature.singular_values_(2) < params_.flatness_thr[tier]) {
         return PatchStatus::FlatEnough;
@@ -204,8 +212,13 @@ void PatchWork::perform_regionwise_segmentation(int zone_idx,
     std::vector<PointXYZ> nonground;
     for (const auto& p : sorted) {
       Eigen::Vector3f v(p.x, p.y, p.z);
-      const float distance = feature.normal_.dot(v - feature.mean_);
-      if (distance < feature.th_dist_d_) {
+      // Original Patchwork compares the uncentred  normal . p  to
+      // th_dist_d_ = th_dist - d_, which is equivalent to "signed
+      // distance to plane < th_dist".  The previous centred form here
+      // shifted the cutoff by an extra -d_ ~ |normal . mean|, which on
+      // KITTI ground is ~1.6 m and effectively disabled the cutoff.
+      const float signed_dist = feature.normal_.dot(v);
+      if (signed_dist < feature.th_dist_d_) {
         ground.push_back(p);
       } else {
         nonground.push_back(p);
