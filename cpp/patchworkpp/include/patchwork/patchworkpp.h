@@ -13,20 +13,13 @@
 
 #include <Eigen/Dense>
 
+#include "patchwork/types.h"  // PointXYZ, PCAFeature, PatchStatus
+
 using namespace std;
 
 #define MAX_POINTS 5000
 
 namespace patchwork {
-
-struct PointXYZ {
-  float x;
-  float y;
-  float z;
-  int idx;
-
-  PointXYZ(float _x, float _y, float _z, int _idx = -1) : x(_x), y(_y), z(_z), idx(_idx) {}
-};
 
 struct RevertCandidate {
   int concentric_idx;
@@ -188,10 +181,10 @@ class PatchWorkpp {
 
   double d_;
 
-  Eigen::VectorXf normal_;
-  Eigen::VectorXf singular_values_;
+  Eigen::Vector3f normal_;
+  Eigen::Vector3f singular_values_;
   Eigen::Matrix3f cov_;
-  Eigen::VectorXf pc_mean_;
+  Eigen::Vector3f pc_mean_;
 
   vector<double> min_ranges_;
   vector<double> sector_sizes_;
@@ -202,6 +195,13 @@ class PatchWorkpp {
   vector<PointXYZ> ground_pc_, non_ground_pc_;
   vector<PointXYZ> regionwise_ground_, regionwise_nonground_;
 
+  // Reused scratch buffers for R-VPF / R-GPF inside extract_piecewiseground.
+  // Promoting these to members avoids per-patch heap (de)allocation, which
+  // dominated the per-frame profile (~14 µs avg patch, hundreds of patches
+  // per cloud) — see issue #96.
+  vector<PointXYZ> src_wo_verticals_;
+  vector<PointXYZ> src_tmp_;
+
   vector<PointXYZ> cloud_ground_, cloud_nonground_;
 
   vector<PointXYZ> centers_, normals_;
@@ -209,7 +209,7 @@ class PatchWorkpp {
   Eigen::MatrixX3f toEigenCloud(const vector<PointXYZ> &cloud);
   Eigen::VectorXi toIndices(const vector<PointXYZ> &cloud);
 
-  void addCloud(vector<PointXYZ> &cloud, vector<PointXYZ> &add);
+  void addCloud(vector<PointXYZ> &cloud, const vector<PointXYZ> &add);
 
   void flush_patches(std::vector<Zone> &czm);
 
@@ -217,20 +217,18 @@ class PatchWorkpp {
 
   void reflected_noise_removal(Eigen::MatrixXf &cloud_in);
 
-  void temporal_ground_revert(std::vector<double> ring_flatness,
-                              std::vector<patchwork::RevertCandidate> candidates,
+  void temporal_ground_revert(const std::vector<double> &ring_flatness,
+                              const std::vector<patchwork::RevertCandidate> &candidates,
                               int concentric_idx);
 
-  double calc_point_to_plane_d(PointXYZ p, Eigen::VectorXf normal, double d);
-  void calc_mean_stdev(std::vector<double> vec, double &mean, double &stdev);
+  double calc_point_to_plane_d(const PointXYZ &p, const Eigen::VectorXf &normal, double d);
+  void calc_mean_stdev(const std::vector<double> &vec, double &mean, double &stdev);
 
   void update_elevation_thr();
   void update_flatness_thr();
 
-  double xy2theta(const double &x, const double &y);
-
-  double xy2radius(const double &x, const double &y);
-
+  // xy2theta / xy2radius / point_z_cmp now live in patchwork/plane_fit.h
+  // (shared with Patchwork classic).
   void estimate_plane(const vector<PointXYZ> &ground);
 
   void extract_piecewiseground(const int zone_idx,
@@ -240,12 +238,12 @@ class PatchWorkpp {
 
   void extract_initial_seeds(const int zone_idx,
                              const vector<PointXYZ> &p_sorted,
-                             vector<PointXYZ> &init_seeds);
+                             vector<PointXYZ> &init_seeds) const;
 
   void extract_initial_seeds(const int zone_idx,
                              const vector<PointXYZ> &p_sorted,
                              vector<PointXYZ> &init_seeds,
-                             double th_seed);
+                             double th_seed) const;
 };
 
 };  // namespace patchwork

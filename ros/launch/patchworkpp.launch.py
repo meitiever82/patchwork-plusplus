@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess
+from launch.actions import DeclareLaunchArgument, ExecuteProcess
 from launch.conditions import IfCondition
 from launch.substitutions import (LaunchConfiguration, PathJoinSubstitution,
                                   PythonExpression)
@@ -17,6 +17,8 @@ class config:
 
 
 def generate_launch_description():
+    algorithm = LaunchConfiguration("algorithm", default="patchworkpp")
+
     use_sim_time = LaunchConfiguration("use_sim_time", default="true")
 
     # tf tree configuration, these are the likely 3 parameters to change and nothing else
@@ -59,7 +61,8 @@ def generate_launch_description():
                 "uprightness_thr": 0.101,
                 # threshold of uprightness using in Ground Likelihood Estimation(GLE). Please refer paper for more information about GLE.
                 "verbose": True,  # display verbose info
-            }
+            },
+            {"algorithm": algorithm},
         ],
     )
     rviz_node = Node(
@@ -82,6 +85,11 @@ def generate_launch_description():
     )
     return LaunchDescription(
         [
+            DeclareLaunchArgument(
+                "algorithm",
+                default_value="patchworkpp",
+                description="Ground segmentation algorithm: 'patchwork' or 'patchworkpp'",
+            ),
             patchworkpp_node,
             rviz_node,
             bagfile_play,

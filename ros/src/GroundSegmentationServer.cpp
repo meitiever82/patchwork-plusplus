@@ -22,10 +22,12 @@ using utils::EigenToPointCloud2;
 using utils::GetTimestamps;
 using utils::PointCloud2ToEigen;
 
-GroundSegmentationServer::GroundSegmentationServer(const rclcpp::NodeOptions &options)
-    : rclcpp::Node("patchworkpp_node", options) {
+// ---------------------------------------------------------------------------
+// Parameter loaders
+// ---------------------------------------------------------------------------
+
+patchwork::Params GroundSegmentationServer::loadPlusplusParamsFromROS() {
   patchwork::Params params;
-  base_frame_ = declare_parameter<std::string>("base_frame", base_frame_);
 
   params.sensor_height = declare_parameter<double>("sensor_height", params.sensor_height);
   params.num_iter      = declare_parameter<int>("num_iter", params.num_iter);
@@ -46,8 +48,61 @@ GroundSegmentationServer::GroundSegmentationServer(const rclcpp::NodeOptions &op
   // ToDo. Support intensity
   params.enable_RNR = false;
 
-  // Construct the main Patchwork++ node
-  Patchworkpp_ = std::make_unique<patchwork::PatchWorkpp>(params);
+  return params;
+}
+
+patchwork::PatchworkParams GroundSegmentationServer::loadClassicParamsFromROS() {
+  patchwork::PatchworkParams params;
+
+  params.sensor_height = declare_parameter<double>("sensor_height", params.sensor_height);
+  params.max_range     = declare_parameter<double>("max_range", params.max_range);
+  params.min_range     = declare_parameter<double>("min_range", params.min_range);
+
+  params.num_iter    = declare_parameter<int>("num_iter", params.num_iter);
+  params.num_lpr     = declare_parameter<int>("num_lpr", params.num_lpr);
+  params.num_min_pts = declare_parameter<int>("num_min_pts", params.num_min_pts);
+  params.th_seeds    = declare_parameter<double>("th_seeds", params.th_seeds);
+  params.th_dist     = declare_parameter<double>("th_dist", params.th_dist);
+
+  params.uprightness_thr = declare_parameter<double>("uprightness_thr", params.uprightness_thr);
+
+  params.adaptive_seed_selection_margin = declare_parameter<double>(
+      "adaptive_seed_selection_margin", params.adaptive_seed_selection_margin);
+
+  params.using_global_thr = declare_parameter<bool>("using_global_thr", params.using_global_thr);
+  params.global_elevation_thr =
+      declare_parameter<double>("global_elevation_thr", params.global_elevation_thr);
+
+  params.ATAT_ON        = declare_parameter<bool>("ATAT_ON", params.ATAT_ON);
+  params.max_h_for_ATAT = declare_parameter<double>("max_h_for_ATAT", params.max_h_for_ATAT);
+  params.num_sectors_for_ATAT =
+      declare_parameter<int>("num_sectors_for_ATAT", params.num_sectors_for_ATAT);
+  params.noise_bound = declare_parameter<double>("noise_bound", params.noise_bound);
+
+  params.verbose = declare_parameter<bool>("verbose", params.verbose);
+
+  return params;
+}
+
+// ---------------------------------------------------------------------------
+// Constructor
+// ---------------------------------------------------------------------------
+
+GroundSegmentationServer::GroundSegmentationServer(const rclcpp::NodeOptions &options)
+    : rclcpp::Node("patchworkpp_node", options) {
+  base_frame_ = declare_parameter<std::string>("base_frame", base_frame_);
+
+  const std::string algorithm = declare_parameter<std::string>("algorithm", "patchworkpp");
+
+  if (algorithm == "patchwork") {
+    patchwork::PatchworkParams classic_params = loadClassicParamsFromROS();
+    impl_ = std::make_unique<patchwork::PatchWork>(classic_params);
+    RCLCPP_INFO(get_logger(), "Algorithm: patchwork (classic)");
+  } else {
+    patchwork::Params plusplus_params = loadPlusplusParamsFromROS();
+    impl_                             = std::make_unique<patchwork::PatchWorkpp>(plusplus_params);
+    RCLCPP_INFO(get_logger(), "Algorithm: patchworkpp (default)");
+  }
 
   // Initialize subscribers
   pointcloud_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
@@ -73,17 +128,23 @@ GroundSegmentationServer::GroundSegmentationServer(const rclcpp::NodeOptions &op
   RCLCPP_INFO(this->get_logger(), "Patchwork++ ROS 2 node initialized");
 }
 
+// ---------------------------------------------------------------------------
+// Callbacks
+// ---------------------------------------------------------------------------
+
 void GroundSegmentationServer::EstimateGround(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
   const auto &cloud = patchworkpp_ros::utils::PointCloud2ToEigenMat(msg);
 
   // Estimate ground
-  Patchworkpp_->estimateGround(cloud);
+  std::visit([&](auto &impl) { impl->estimateGround(cloud); }, impl_);
   cloud_publisher_->publish(patchworkpp_ros::utils::EigenMatToPointCloud2(cloud, msg->header));
+
   // Get ground and nonground
-  Eigen::MatrixX3f ground    = Patchworkpp_->getGround();
-  Eigen::MatrixX3f nonground = Patchworkpp_->getNonground();
-  double time_taken          = Patchworkpp_->getTimeTaken();
+  Eigen::MatrixX3f ground    = std::visit([](auto &impl) { return impl->getGround(); }, impl_);
+  Eigen::MatrixX3f nonground = std::visit([](auto &impl) { return impl->getNonground(); }, impl_);
+  double time_taken          = std::visit([](auto &impl) { return impl->getTimeTaken(); }, impl_);
+  (void)time_taken;  // available for debug logging if needed
   PublishClouds(ground, nonground, msg->header);
 }
 

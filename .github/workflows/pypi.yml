@@ -14,30 +14,32 @@ jobs:
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build sdist
         run: pipx run build --sdist ${{github.workspace}}/python/
       - name: Move sdist to dist
         run: mkdir -p dist && mv ${{github.workspace}}/python/dist/*.tar.gz dist/
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: sdist
           path: dist/*.tar.gz
 
   cibuildwheel:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-2022] # TODO(hlim): Support Mac, macos-14]
+        os: [ubuntu-22.04, windows-2022, macos-14]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build test wheels (only PRs)
         if: github.event_name != 'release'
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.21.3
         env: # build 1 build per platform just to make sure we can do it later when releasing
           CIBW_BUILD: "cp310-*"
         with:
@@ -45,12 +47,17 @@ jobs:
 
       - name: Build all wheels
         if: github.event_name == 'release'
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.21.3
+        env:
+          # PyPy lacks the C API symbols pybind11 needs (PyModule_GetFilenameObject etc.).
+          # Restrict to CPython only — PyPy native-extension support is not a goal here.
+          CIBW_SKIP: "pp*"
         with:
           package-dir: ${{github.workspace}}/python/
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   pypi:
@@ -58,10 +65,11 @@ jobs:
     needs: [cibuildwheel, build_sdist]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifact
           path: dist
+          pattern: "{sdist,wheels-*}"
+          merge-multiple: true
 
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:

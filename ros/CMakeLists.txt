@@ -33,7 +33,9 @@ find_package(tf2_ros REQUIRED)
 add_library(gseg_component SHARED src/GroundSegmentationServer.cpp)
 target_compile_features(gseg_component PUBLIC cxx_std_20)
 target_include_directories(gseg_component PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(gseg_component ${PARENT_PROJECT_NAME}::${TARGET_NAME})
+target_link_libraries(gseg_component
+  ${PARENT_PROJECT_NAME}::${TARGET_NAME}
+  ${PARENT_PROJECT_NAME}::ground_seg_classic)
 ament_target_dependencies(
   gseg_component
   rcutils

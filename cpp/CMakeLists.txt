@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(patchworkpp VERSION 1.0.4)
+project(patchworkpp VERSION 1.4.1)
 
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" OFF)
 option(INCLUDE_CPP_EXAMPLES "Include C++ example codes, which require Open3D for visualization" ON)
@@ -40,12 +40,35 @@ endfunction()
 
 find_external_dependency("Eigen3" "Eigen3::Eigen" "${CMAKE_CURRENT_LIST_DIR}/cmake/eigen.cmake")
 
+# Intel oneTBB / TBB — OPTIONAL. The classic Patchwork main loop
+# uses tbb::parallel_for when available (1.73x speedup on KITTI) and
+# falls back to a sequential loop otherwise. Patchwork++ does not use
+# TBB; see issue #96 for the measurement that justifies that decision.
+#
+# To enable the speedup locally:
+#   Ubuntu/Debian:  apt install libtbb-dev
+#   macOS:          brew install tbb
+#   Windows:        vcpkg install tbb  (or use oneAPI Base Toolkit)
+find_package(TBB CONFIG QUIET)
+if (NOT TBB_FOUND)
+  find_package(TBB MODULE QUIET)
+endif()
+if (TBB_FOUND)
+  message(STATUS "TBB found — classic Patchwork will use tbb::parallel_for.")
+else()
+  message(STATUS
+    "TBB not found — classic Patchwork falls back to a sequential loop. "
+    "Install libtbb-dev / brew install tbb / vcpkg install tbb to get the parallel speedup.")
+endif()
+
 # Parameters in `patchworkpp` subdirectory.
 # Thus, link should be `patchworkpp::ground_seg_cores`
 set(PARENT_PROJECT_NAME ${PROJECT_NAME})
 set(TARGET_NAME ground_seg_cores)
 
+add_subdirectory(common)
 add_subdirectory(patchworkpp)
+add_subdirectory(patchwork)
 
 if (INCLUDE_CPP_EXAMPLES)
   if(CMAKE_VERSION VERSION_LESS "3.15")
